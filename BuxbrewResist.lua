@@ -110,8 +110,11 @@ end
 
 local function printSchoolInfo(schoolID, schoolName)
     -- Skip Physical and Holy detailed view
-    if schoolName == "Physical" or schoolName == "Holy" then
-        DEFAULT_CHAT_FRAME:AddMessage("|cffffff00["..schoolName.."]|r Resist: "..(getResistanceValue(schoolID) or "N/A").." (No detailed resist rolls)")
+    if schoolName == "Physical" then
+        DEFAULT_CHAT_FRAME:AddMessage("|cffffff00["..schoolName.."]|r: "..(getResistanceValue(schoolID) or "N/A").." (Armor reduction formula applies)")
+        return
+    elseif schoolName == "Holy" then
+        DEFAULT_CHAT_FRAME:AddMessage("|cffffff00["..schoolName.."]|r: "..(getResistanceValue(schoolID) or "N/A").." (No resist rolls)")
         return
     end
 
@@ -158,8 +161,14 @@ local function printSimpleOverview()
     for _, data in pairs(schoolMap) do
         local resist = getResistanceValue(data.id)
         if resist then
-            local AR = computeAverageResist(resist, playerLevel)
-            DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": "..resist.." - "..fmtPercent(AR,2))
+            if data.name == "Physical" then
+                DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": "..resist.." (Armor reduction formula applies)")
+            elseif data.name == "Holy" then
+                DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": "..resist.." (No resist rolls)")
+            else
+                local AR = computeAverageResist(resist, playerLevel)
+                DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": "..resist.." - "..fmtPercent(AR,2))
+            end
         else
             DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": N/A")
         end

@@ -1,5 +1,11 @@
+## Interface: 11200
+## Title: BuxbrewResist
+## Notes: Prints resistance info via /buxres command
+## Author: Buxbrew
+## Version: 1.2
+
 -- BuxbrewResist
--- /buxres [arcane|fire|nature|frost|shadow]
+-- /buxres [fire|nature|frost|shadow|arcane]
 -- Prints detailed resistance breakdown in chat.
 
 --------------------------------------------------
@@ -7,11 +13,11 @@
 --------------------------------------------------
 
 local schoolMap = {
-    arcane = { id = 7, name = "Arcane" },
     fire   = { id = 3, name = "Fire" },
     nature = { id = 4, name = "Nature" },
     frost  = { id = 5, name = "Frost" },
     shadow = { id = 6, name = "Shadow" },
+    arcane = { id = 7, name = "Arcane" },
 }
 
 local function clamp(v, lo, hi)
@@ -30,7 +36,7 @@ local function computeAverageResist(resistValue, casterLevel)
     return ar
 end
 
--- Format percentage (Lua 5.0 safe)
+-- Format percentage (Lua 5.0/5.1 safe)
 local function fmtPercent(v, decimals)
     if not decimals then decimals = 1 end
     local mult = 10 ^ decimals
@@ -95,12 +101,29 @@ local function aggregateTo25Buckets(probs10)
 end
 
 --------------------------------------------------
+-- Resistance retrieval
+--------------------------------------------------
+
+local function getResistanceValue(schoolID)
+    -- Protect against invalid indices
+    local base, total, bonus = UnitResistance("player", schoolID)
+    if total == nil then
+        return nil
+    end
+    return total
+end
+
+--------------------------------------------------
 -- Output
 --------------------------------------------------
 
 local function printSchoolInfo(schoolID, schoolName)
-    local base, total, bonus = UnitResistance("player", schoolID)
-    local resist = total or 0
+    local resist = getResistanceValue(schoolID)
+    if not resist then
+        DEFAULT_CHAT_FRAME:AddMessage("|cffff0000"..schoolName.." resist not available on this server.|r")
+        return
+    end
+
     local playerLevel = UnitLevel("player") or 1
     local casterLevel = playerLevel
     local AR = computeAverageResist(resist, casterLevel)
@@ -119,23 +142,32 @@ local function printSchoolInfo(schoolID, schoolName)
     -- Print results
     DEFAULT_CHAT_FRAME:AddMessage("|cffffff00["..schoolName.."]|r Resist: "..resist.." (Player level "..playerLevel..")")
     DEFAULT_CHAT_FRAME:AddMessage("  Average resist vs same-level caster: |cff00ff00"..fmtPercent(AR,2).."|r (max 75%)")
-
     DEFAULT_CHAT_FRAME:AddMessage("  Detailed (10% increments):")
     for i = 0, 10 do
         local x = i * 10
         local p = probs10[i] or 0
         DEFAULT_CHAT_FRAME:AddMessage("    "..x.."% resist: "..fmtPercent(p,2).." chance")
     end
-
     DEFAULT_CHAT_FRAME:AddMessage("  Aggregated (0/25/50/75/100):")
     DEFAULT_CHAT_FRAME:AddMessage("    0% (full dmg): "..fmtPercent(buckets25[0] or 0,2))
     DEFAULT_CHAT_FRAME:AddMessage("   25%: "..fmtPercent(buckets25[25] or 0,2))
     DEFAULT_CHAT_FRAME:AddMessage("   50%: "..fmtPercent(buckets25[50] or 0,2))
     DEFAULT_CHAT_FRAME:AddMessage("   75%: "..fmtPercent(buckets25[75] or 0,2))
     DEFAULT_CHAT_FRAME:AddMessage("  100%: "..fmtPercent(buckets25[100] or 0,2))
-
     DEFAULT_CHAT_FRAME:AddMessage("  Expected avg reduction: |cff00ff00"..fmtPercent(expected,2).."|r")
     DEFAULT_CHAT_FRAME:AddMessage("  |cffffa500Note:|r This covers resist rolls only. Spell hit/miss is a separate roll.")
+end
+
+local function printSimpleOverview()
+    DEFAULT_CHAT_FRAME:AddMessage("|cffffff00[Resistance Overview]|r")
+    for _, data in pairs(schoolMap) do
+        local resist = getResistanceValue(data.id)
+        if resist then
+            DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": "..resist)
+        else
+            DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": N/A")
+        end
+    end
 end
 
 --------------------------------------------------
@@ -146,16 +178,13 @@ local function BuxResCommand(msg)
     msg = string.lower(msg or "")
 
     if msg == "" then
-        -- Print all schools
-        for key, data in pairs(schoolMap) do
-            printSchoolInfo(data.id, data.name)
-        end
+        printSimpleOverview()
         return
     end
 
     local found = nil
     for k, v in pairs(schoolMap) do
-        if string.find(k, msg) == 1 then
+        if k:sub(1, #msg) == msg then
             found = v
             break
         end
@@ -164,7 +193,7 @@ local function BuxResCommand(msg)
     if found then
         printSchoolInfo(found.id, found.name)
     else
-        DEFAULT_CHAT_FRAME:AddMessage("|cffff0000Usage:|r /buxres [arcane|fire|nature|frost|shadow]")
+        DEFAULT_CHAT_FRAME:AddMessage("|cffff0000Usage:|r /buxres [fire|nature|frost|shadow|arcane]")
     end
 end
 

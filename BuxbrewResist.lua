@@ -225,11 +225,17 @@ local function CreateMinimapButton()
     btn:SetFrameLevel(8)
     btn:EnableMouse(true)
     
-    -- Black texture for visibility
-    local tex = btn:CreateTexture(nil, "BACKGROUND")
-    tex:SetAllPoints()
-    tex:SetColorTexture(0, 0, 0, 1) -- black square
-    
+    -- Icon texture
+    local icon = btn:CreateTexture(nil, "BACKGROUND")
+    icon:SetAllPoints()
+    icon:SetTexture("Interface\\ICONS\\INV_Misc_Head_Dwarf_02.blp")
+
+    -- Border (standard minimap button style)
+    local border = btn:CreateTexture(nil, "OVERLAY")
+    border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
+    border:SetSize(54, 54)
+    border:SetPoint("TOPLEFT", btn, "TOPLEFT", -10, 10)
+
     -- Position button around minimap
     local radius = 80
     local angleRad = math.rad(BuxResDB.minimapAngle)
@@ -278,3 +284,4 @@ f:RegisterEvent("PLAYER_LOGIN")
 f:SetScript("OnEvent", function()
     CreateMinimapButton()
 end)
+

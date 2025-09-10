@@ -1,6 +1,6 @@
 -- BuxbrewResist
 -- /buxres [physical|holy|fire|nature|frost|shadow|arcane]
--- Prints resistance info in chat.
+-- Prints resistance info in chat and provides a minimap button.
 
 --------------------------------------------------
 -- Utility functions
@@ -208,3 +208,68 @@ end
 
 SLASH_BUXRES1 = "/buxres"
 SlashCmdList["BUXRES"] = BuxResCommand
+
+--------------------------------------------------
+-- Circular Minimap Button
+--------------------------------------------------
+
+-- Saved variable to remember position
+BuxResDB = BuxResDB or {}
+if not BuxResDB.minimapAngle then BuxResDB.minimapAngle = 45 end
+
+local radius = 80 -- distance from minimap center
+
+local BuxResMinimapButton = CreateFrame("Button", "BuxResMinimapButton", Minimap)
+BuxResMinimapButton:SetSize(32,32)
+BuxResMinimapButton:SetFrameStrata("MEDIUM")
+BuxResMinimapButton:SetFrameLevel(8)
+
+-- Icon
+BuxResMinimapButton.icon = BuxResMinimapButton:CreateTexture(nil,"BACKGROUND")
+BuxResMinimapButton.icon:SetTexture("Interface\\Icons\\INV_Inscription_Tradeskill01") -- example icon
+BuxResMinimapButton.icon:SetAllPoints(BuxResMinimapButton)
+
+-- Position update function
+local function updatePosition()
+    local angleRad = math.rad(BuxResDB.minimapAngle)
+    local x = radius * cos(angleRad)
+    local y = radius * sin(angleRad)
+    BuxResMinimapButton:SetPoint("CENTER", Minimap, "CENTER", x, y)
+end
+updatePosition()
+
+-- Dragging
+BuxResMinimapButton:RegisterForDrag("LeftButton")
+BuxResMinimapButton:SetScript("OnDragStart", function(self)
+    self:LockHighlight()
+end)
+BuxResMinimapButton:SetScript("OnDragStop", function(self)
+    self:UnlockHighlight()
+    local mx, my = Minimap:GetCenter()
+    local px, py = GetCursorPosition()
+    local scale = UIParent:GetEffectiveScale()
+    local dx = (px/scale - mx)
+    local dy = (py/scale - my)
+    BuxResDB.minimapAngle = math.deg(math.atan2(dy, dx))
+    updatePosition()
+end)
+
+-- Tooltip
+BuxResMinimapButton:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+    GameTooltip:AddLine("BuxbrewResist",1,1,0)
+    GameTooltip:AddLine("Click: Show resistance overview")
+    GameTooltip:AddLine("Drag: Move button around minimap")
+    GameTooltip:Show()
+end)
+BuxResMinimapButton:SetScript("OnLeave", function(self)
+    GameTooltip:Hide()
+end)
+
+-- Click
+BuxResMinimapButton:SetScript("OnClick", function(self, button)
+    if button == "LeftButton" then
+        printSimpleOverview()
+    end
+end)
+

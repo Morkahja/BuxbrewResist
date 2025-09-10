@@ -1,6 +1,6 @@
 -- BuxbrewResist
 -- /buxres [fire|nature|frost|shadow|arcane]
--- Prints detailed resistance breakdown in chat.
+-- Prints resistance info in chat.
 
 --------------------------------------------------
 -- Utility functions

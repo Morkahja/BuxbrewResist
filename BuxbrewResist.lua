@@ -210,15 +210,16 @@ SLASH_BUXRES1 = "/buxres"
 SlashCmdList["BUXRES"] = BuxResCommand
 
 --------------------------------------------------
--- BuxRes Minimap Button (force visible + clickable)
+-- BuxRes Minimap Button (Vanilla / Turtle WoW)
 --------------------------------------------------
 
 local BUTTON_NAME = "BuxResMinimapButton"
 
 local function CreateBuxResButton()
+    -- Avoid creating multiple times
     if _G[BUTTON_NAME] then return end
 
-    -- Main button
+    -- Create button parented to Minimap
     local btn = CreateFrame("Button", BUTTON_NAME, Minimap)
     btn:SetSize(32, 32)
     btn:SetFrameStrata("HIGH")
@@ -226,52 +227,49 @@ local function CreateBuxResButton()
     btn:EnableMouse(true)
     btn:RegisterForClicks("AnyUp")
 
-    -- Background circle (so it’s always visible)
-    local bg = btn:CreateTexture(nil, "BACKGROUND")
-    bg:SetTexture("Interface\\Minimap\\UI-Minimap-Background")
-    bg:SetAllPoints(btn)
-
-    -- Our icon (dwarf head)
+    -- Icon
     local tex = btn:CreateTexture(nil, "ARTWORK")
     tex:SetTexture("Interface\\Icons\\INV_Misc_Head_Dwarf_02")
     tex:SetTexCoord(0.07, 0.93, 0.07, 0.93) -- crop borders
     tex:SetAllPoints(btn)
 
-    -- Highlight when hovered
+    -- Highlight on hover
     local hl = btn:CreateTexture(nil, "HIGHLIGHT")
     hl:SetTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
     hl:SetAllPoints(btn)
 
-    -- Place at fixed spot (top-right of minimap)
-    btn:SetPoint("TOPRIGHT", Minimap, "TOPRIGHT", -10, -10)
-
-    --------------------------------------------------
     -- Tooltip
-    --------------------------------------------------
     btn:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
         GameTooltip:AddLine("BuxRes Commands", 1, 1, 1)
         GameTooltip:AddLine("/buxres", 0.8, 0.8, 0.8)
         GameTooltip:AddLine("/buxres [school]", 0.8, 0.8, 0.8)
+        GameTooltip:AddLine("/buxres show - Simple overview", 0.8, 0.8, 0.8)
         GameTooltip:Show()
     end)
     btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
-    --------------------------------------------------
-    -- Clicks
-    --------------------------------------------------
+    -- Click handler
     btn:SetScript("OnClick", function(self, button)
         if button == "LeftButton" then
-            printSimpleOverview()
+            printSimpleOverview() -- your function
         elseif button == "RightButton" then
-            ChatFrame1:AddMessage("|cff00ff00BuxRes:|r Right click (future menu here)")
+            DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00BuxRes:|r Right-click menu placeholder")
         end
     end)
 
+    -- Position the button at the top-right corner of Minimap
+    btn:SetPoint("TOPRIGHT", Minimap, "TOPRIGHT", -10, -10)
+
     btn:Show()
+
+    -- Exclude from MBF if it exists
+    if MinimapButtonFrame_ExcludeButton then
+        MinimapButtonFrame_ExcludeButton(btn)
+    end
 end
 
--- Hook after login
+-- Create button after login
 local f = CreateFrame("Frame")
 f:RegisterEvent("PLAYER_LOGIN")
 f:SetScript("OnEvent", CreateBuxResButton)

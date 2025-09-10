@@ -213,63 +213,76 @@ SlashCmdList["BUXRES"] = BuxResCommand
 -- Circular Minimap Button
 --------------------------------------------------
 
--- Saved variable to remember position
-BuxResDB = BuxResDB or {}
-if not BuxResDB.minimapAngle then BuxResDB.minimapAngle = 45 end
+local function CreateMinimapButton()
+    if not Minimap then return end -- safeguard
 
-local radius = 80 -- distance from minimap center
+    BuxResDB = BuxResDB or {}
+    if not BuxResDB.minimapAngle then BuxResDB.minimapAngle = 45 end
 
-local BuxResMinimapButton = CreateFrame("Button", "BuxResMinimapButton", Minimap)
-BuxResMinimapButton:SetSize(32,32)
-BuxResMinimapButton:SetFrameStrata("MEDIUM")
-BuxResMinimapButton:SetFrameLevel(8)
+    local radius = 80 -- distance from minimap center
 
--- Icon
-BuxResMinimapButton.icon = BuxResMinimapButton:CreateTexture(nil,"BACKGROUND")
-BuxResMinimapButton.icon:SetTexture("Interface\\Icons\\INV_Inscription_Tradeskill01") -- example icon
-BuxResMinimapButton.icon:SetAllPoints(BuxResMinimapButton)
+    local BuxResMinimapButton = CreateFrame("Button", "BuxResMinimapButton", Minimap)
+    BuxResMinimapButton:SetSize(32,32)
+    BuxResMinimapButton:SetFrameStrata("MEDIUM")
+    BuxResMinimapButton:SetFrameLevel(8)
 
--- Position update function
-local function updatePosition()
-    local angleRad = math.rad(BuxResDB.minimapAngle)
-    local x = radius * cos(angleRad)
-    local y = radius * sin(angleRad)
-    BuxResMinimapButton:SetPoint("CENTER", Minimap, "CENTER", x, y)
-end
-updatePosition()
+    -- Icon
+    BuxResMinimapButton.icon = BuxResMinimapButton:CreateTexture(nil,"BACKGROUND")
+    BuxResMinimapButton.icon:SetTexture("Interface\\Icons\\INV_Inscription_Tradeskill01")
+    BuxResMinimapButton.icon:SetAllPoints(BuxResMinimapButton)
 
--- Dragging
-BuxResMinimapButton:RegisterForDrag("LeftButton")
-BuxResMinimapButton:SetScript("OnDragStart", function(self)
-    self:LockHighlight()
-end)
-BuxResMinimapButton:SetScript("OnDragStop", function(self)
-    self:UnlockHighlight()
-    local mx, my = Minimap:GetCenter()
-    local px, py = GetCursorPosition()
-    local scale = UIParent:GetEffectiveScale()
-    local dx = (px/scale - mx)
-    local dy = (py/scale - my)
-    BuxResDB.minimapAngle = math.deg(math.atan2(dy, dx))
+    -- Position update function
+    local function updatePosition()
+        local angleRad = math.rad(BuxResDB.minimapAngle)
+        local x = radius * cos(angleRad)
+        local y = radius * sin(angleRad)
+        BuxResMinimapButton:SetPoint("CENTER", Minimap, "CENTER", x, y)
+    end
     updatePosition()
-end)
 
--- Tooltip
-BuxResMinimapButton:SetScript("OnEnter", function(self)
-    GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-    GameTooltip:AddLine("BuxbrewResist",1,1,0)
-    GameTooltip:AddLine("Click: Show resistance overview")
-    GameTooltip:AddLine("Drag: Move button around minimap")
-    GameTooltip:Show()
-end)
-BuxResMinimapButton:SetScript("OnLeave", function(self)
-    GameTooltip:Hide()
-end)
+    -- Dragging
+    BuxResMinimapButton:RegisterForDrag("LeftButton")
+    BuxResMinimapButton:SetScript("OnDragStart", function(self)
+        self:LockHighlight()
+    end)
+    BuxResMinimapButton:SetScript("OnDragStop", function(self)
+        self:UnlockHighlight()
+        local mx, my = Minimap:GetCenter()
+        local px, py = GetCursorPosition()
+        local scale = UIParent:GetEffectiveScale()
+        local dx = (px/scale - mx)
+        local dy = (py/scale - my)
+        BuxResDB.minimapAngle = math.deg(math.atan2(dy, dx))
+        updatePosition()
+    end)
 
--- Click
-BuxResMinimapButton:SetScript("OnClick", function(self, button)
-    if button == "LeftButton" then
-        printSimpleOverview()
+    -- Tooltip
+    BuxResMinimapButton:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+        GameTooltip:AddLine("BuxbrewResist",1,1,0)
+        GameTooltip:AddLine("Click: Show resistance overview")
+        GameTooltip:AddLine("Drag: Move button around minimap")
+        GameTooltip:Show()
+    end)
+    BuxResMinimapButton:SetScript("OnLeave", function(self)
+        GameTooltip:Hide()
+    end)
+
+    -- Click
+    BuxResMinimapButton:SetScript("OnClick", function(self, button)
+        if button == "LeftButton" then
+            printSimpleOverview()
+        end
+    end)
+end
+
+-- Listen for PLAYER_LOGIN to safely create the button
+local f = CreateFrame("Frame")
+f:RegisterEvent("PLAYER_LOGIN")
+f:SetScript("OnEvent", function(self, event)
+    if event == "PLAYER_LOGIN" then
+        CreateMinimapButton()
     end
 end)
+
 

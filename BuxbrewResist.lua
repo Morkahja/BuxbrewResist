@@ -214,32 +214,40 @@ SlashCmdList["BUXRES"] = BuxResCommand
 --------------------------------------------------
 
 local function CreateMinimapButton()
+    -- Ensure saved variables
     BuxResDB = BuxResDB or {}
     if not BuxResDB.minimapAngle then BuxResDB.minimapAngle = 45 end
 
+    -- Create the button
     local btn = CreateFrame("Button", "BuxResMinimapButton", Minimap)
-    btn:SetWidth(32)
-    btn:SetHeight(32)
+    btn:SetSize(32, 32)
     btn:SetFrameStrata("MEDIUM")
     btn:SetFrameLevel(8)
-    btn:EnableMouse(true) -- make it clickable
-
-    -- Visible black texture
-    local tex = btn:CreateTexture(nil,"BACKGROUND")
+    btn:EnableMouse(true)
+    
+    -- Black texture for visibility
+    local tex = btn:CreateTexture(nil, "BACKGROUND")
     tex:SetAllPoints()
-    tex:SetColorTexture(0,0,0,1) -- black
-
-    -- Position around minimap edge
+    tex:SetColorTexture(0, 0, 0, 1) -- black square
+    
+    -- Position button around minimap
     local radius = 80
     local angleRad = math.rad(BuxResDB.minimapAngle)
     local x = radius * math.cos(angleRad)
     local y = radius * math.sin(angleRad)
     btn:SetPoint("CENTER", Minimap, "CENTER", x, y)
+    
+    -- Ensure button is shown
+    btn:Show()
+
+    -- Persistent menu frame
+    local menuFrame = CreateFrame("Frame", "BuxResMinimapButtonMenu", UIParent, "UIDropDownMenuTemplate")
 
     -- Tooltip
     btn:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self,"ANCHOR_LEFT")
-        GameTooltip:AddLine("BuxbrewRes",1,1,0)
+        GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+        GameTooltip:ClearLines()
+        GameTooltip:AddLine("BuxbrewRes", 1, 1, 0)
         GameTooltip:AddLine("Left-Click: Simple overview")
         GameTooltip:AddLine("Right-Click: Choose resistance")
         GameTooltip:Show()
@@ -253,22 +261,20 @@ local function CreateMinimapButton()
         elseif button == "RightButton" then
             local menu = {}
             for _, data in pairs(schoolMap) do
-                table.insert(menu,{
+                table.insert(menu, {
                     text = data.name,
-                    func = function() printSchoolInfo(data.id,data.name) end,
+                    func = function() printSchoolInfo(data.id, data.name) end,
                     notCheckable = true
                 })
             end
-            local menuFrame = CreateFrame("Frame","BuxResMinimapButtonMenu",UIParent,"UIDropDownMenuTemplate")
-            EasyMenu(menu,menuFrame,"cursor",0,0,"MENU")
+            EasyMenu(menu, menuFrame, "cursor", 0, 0, "MENU")
         end
     end)
 end
 
--- Create button after addon loaded to ensure Minimap exists
+-- Create button after PLAYER_LOGIN to ensure Minimap exists
 local f = CreateFrame("Frame")
 f:RegisterEvent("PLAYER_LOGIN")
 f:SetScript("OnEvent", function()
     CreateMinimapButton()
 end)
-

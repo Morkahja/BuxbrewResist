@@ -216,7 +216,7 @@ SlashCmdList["BUXRES"] = BuxResCommand
 local function CreateMinimapButton()
     DEFAULT_CHAT_FRAME:AddMessage("BuxRes: Creating minimap button...")
 
-    local btn = CreateFrame("Button", "BuxResMinimapButton", Minimap)
+    local btn = CreateFrame("Button", "BuxResMinimapButton", UIParent)
     btn:SetSize(32, 32)
     btn:SetFrameStrata("HIGH")
     btn:SetFrameLevel(10)
@@ -226,7 +226,9 @@ local function CreateMinimapButton()
     tex:SetColorTexture(1, 0, 0, 1) -- bright red
     tex:SetAllPoints()
 
+    -- Attach to minimap by anchoring
     btn:SetPoint("CENTER", Minimap, "CENTER", 40, 0)
+
     btn:Show()
 end
 

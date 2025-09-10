@@ -210,7 +210,7 @@ SLASH_BUXRES1 = "/buxres"
 SlashCmdList["BUXRES"] = BuxResCommand
 
 --------------------------------------------------
--- Simple Minimap Button (Left-click / Right-click)
+-- Simple Minimap Button (Clickable, Tooltip)
 --------------------------------------------------
 
 local function CreateMinimapButton()
@@ -222,6 +222,7 @@ local function CreateMinimapButton()
     btn:SetHeight(32)
     btn:SetFrameStrata("MEDIUM")
     btn:SetFrameLevel(8)
+    btn:EnableMouse(true) -- make it clickable
 
     -- Visible black texture
     local tex = btn:CreateTexture(nil,"BACKGROUND")
@@ -238,7 +239,7 @@ local function CreateMinimapButton()
     -- Tooltip
     btn:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self,"ANCHOR_LEFT")
-        GameTooltip:AddLine("BuxbrewResist",1,1,0)
+        GameTooltip:AddLine("BuxbrewRes",1,1,0)
         GameTooltip:AddLine("Left-Click: Simple overview")
         GameTooltip:AddLine("Right-Click: Choose resistance")
         GameTooltip:Show()

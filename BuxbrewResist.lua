@@ -7,11 +7,13 @@
 --------------------------------------------------
 
 local schoolMap = {
-    fire   = { id = 3, name = "Fire" },
-    nature = { id = 4, name = "Nature" },
-    frost  = { id = 5, name = "Frost" },
-    shadow = { id = 6, name = "Shadow" },
-    arcane = { id = 7, name = "Arcane" },
+    physical = { id = 0, name = "Physical" },
+    holy     = { id = 1, name = "Holy" },
+    fire     = { id = 2, name = "Fire" },
+    nature   = { id = 3, name = "Nature" },
+    frost    = { id = 4, name = "Frost" },
+    shadow   = { id = 5, name = "Shadow" },
+    arcane   = { id = 6, name = "Arcane" },
 }
 
 local function clamp(v, lo, hi)
@@ -109,7 +111,7 @@ end
 local function printSchoolInfo(schoolID, schoolName)
     local resist = getResistanceValue(schoolID)
     if not resist then
-        DEFAULT_CHAT_FRAME:AddMessage("|cffff0000"..schoolName.." resist not available on this server.|r")
+        DEFAULT_CHAT_FRAME:AddMessage("|cffff0000"..schoolName.." resist not available.|r")
         return
     end
 
@@ -141,7 +143,7 @@ local function printSchoolInfo(schoolID, schoolName)
     DEFAULT_CHAT_FRAME:AddMessage("   75%: "..fmtPercent(buckets25[75] or 0,2))
     DEFAULT_CHAT_FRAME:AddMessage("  100%: "..fmtPercent(buckets25[100] or 0,2))
     DEFAULT_CHAT_FRAME:AddMessage("  Expected avg reduction: |cff00ff00"..fmtPercent(expected,2).."|r")
-    DEFAULT_CHAT_FRAME:AddMessage("  |cffffa500Note:|r This covers resist rolls only. Spell hit/miss is a separate roll.")
+    DEFAULT_CHAT_FRAME:AddMessage("  |cffffa500Note:|r This covers resist rolls only. Spell hit/miss is separate.")
 end
 
 local function printSimpleOverview()
@@ -152,36 +154,3 @@ local function printSimpleOverview()
             DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": "..resist)
         else
             DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": N/A")
-        end
-    end
-end
-
---------------------------------------------------
--- Slash command
---------------------------------------------------
-
-local function BuxResCommand(msg)
-    msg = string.lower(msg or "")
-
-    if msg == "" then
-        printSimpleOverview()
-        return
-    end
-
-    local found = nil
-    for k, v in pairs(schoolMap) do
-        if k:sub(1, string.len(msg)) == msg then
-            found = v
-            break
-        end
-    end
-
-    if found then
-        printSchoolInfo(found.id, found.name)
-    else
-        DEFAULT_CHAT_FRAME:AddMessage("|cffff0000Usage:|r /buxres [fire|nature|frost|shadow|arcane]")
-    end
-end
-
-SLASH_BUXRES1 = "/buxres"
-SlashCmdList["BUXRES"] = BuxResCommand

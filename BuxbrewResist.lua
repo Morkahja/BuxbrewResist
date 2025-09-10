@@ -214,39 +214,36 @@ SlashCmdList["BUXRES"] = BuxResCommand
 --------------------------------------------------
 
 local function CreateMinimapButton()
-    if not Minimap then return end -- safeguard
-
     BuxResDB = BuxResDB or {}
     if not BuxResDB.minimapAngle then BuxResDB.minimapAngle = 45 end
 
     local radius = 80 -- distance from minimap center
 
-    local BuxResMinimapButton = CreateFrame("Button", "BuxResMinimapButton", Minimap)
-    BuxResMinimapButton:SetSize(32,32)
-    BuxResMinimapButton:SetFrameStrata("MEDIUM")
-    BuxResMinimapButton:SetFrameLevel(8)
+    -- Create the button
+    local btn = CreateFrame("Button", "BuxResMinimapButton", Minimap)
+    btn:SetSize(32,32)
+    btn:SetFrameStrata("MEDIUM")
+    btn:SetFrameLevel(8)
 
-    -- Visible black icon
-    BuxResMinimapButton.icon = BuxResMinimapButton:CreateTexture(nil,"BACKGROUND")
-    BuxResMinimapButton.icon:SetColorTexture(0,0,0,1) -- black
-    BuxResMinimapButton.icon:SetAllPoints(BuxResMinimapButton)
+    -- Black visible circle
+    btn.texture = btn:CreateTexture(nil, "BACKGROUND")
+    btn.texture:SetAllPoints()
+    btn.texture:SetColorTexture(0,0,0,1) -- solid black
 
-    -- Position update function
+    -- Position function
     local function updatePosition()
         local angleRad = math.rad(BuxResDB.minimapAngle)
-        local x = radius * cos(angleRad)
-        local y = radius * sin(angleRad)
-        BuxResMinimapButton:SetPoint("CENTER", Minimap, "CENTER", x, y)
+        local x = radius * math.cos(angleRad)
+        local y = radius * math.sin(angleRad)
+        btn:SetPoint("CENTER", Minimap, "CENTER", x, y)
     end
     updatePosition()
 
     -- Dragging
-    BuxResMinimapButton:RegisterForDrag("LeftButton")
-    BuxResMinimapButton:SetScript("OnDragStart", function(self)
-        self:LockHighlight()
-    end)
-    BuxResMinimapButton:SetScript("OnDragStop", function(self)
-        self:UnlockHighlight()
+    btn:RegisterForDrag("LeftButton")
+    btn:SetScript("OnDragStart", btn.StartMoving)
+    btn:SetScript("OnDragStop", function(self)
+        self:StopMovingOrSizing()
         local mx, my = Minimap:GetCenter()
         local px, py = GetCursorPosition()
         local scale = UIParent:GetEffectiveScale()
@@ -257,7 +254,7 @@ local function CreateMinimapButton()
     end)
 
     -- Tooltip
-    BuxResMinimapButton:SetScript("OnEnter", function(self)
+    btn:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
         GameTooltip:AddLine("BuxbrewResist",1,1,0)
         GameTooltip:AddLine("Left-Click: Simple overview")
@@ -265,12 +262,12 @@ local function CreateMinimapButton()
         GameTooltip:AddLine("Drag: Move button")
         GameTooltip:Show()
     end)
-    BuxResMinimapButton:SetScript("OnLeave", function(self)
+    btn:SetScript("OnLeave", function(self)
         GameTooltip:Hide()
     end)
 
-    -- Click: left = simple overview, right = dropdown
-    BuxResMinimapButton:SetScript("OnClick", function(self, button)
+    -- Click actions
+    btn:SetScript("OnClick", function(self, button)
         if button == "LeftButton" then
             printSimpleOverview()
         elseif button == "RightButton" then
@@ -279,10 +276,11 @@ local function CreateMinimapButton()
                 table.insert(menu, {
                     text = data.name,
                     func = function() printSchoolInfo(data.id, data.name) end,
+                    notCheckable = true,
                 })
             end
-            -- Show menu near cursor
-            EasyMenu(menu, BuxResMinimapButton.menuFrame or CreateFrame("Frame", "BuxResMinimapButtonMenu", UIParent, "UIDropDownMenuTemplate"), "cursor", 0 , 0, "MENU")
+            local menuFrame = CreateFrame("Frame", "BuxResMinimapButtonMenu", UIParent, "UIDropDownMenuTemplate")
+            EasyMenu(menu, menuFrame, "cursor", 0 , 0, "MENU")
         end
     end)
 end
@@ -295,3 +293,4 @@ f:SetScript("OnEvent", function(self, event)
         CreateMinimapButton()
     end
 end)
+

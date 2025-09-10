@@ -210,28 +210,40 @@ SLASH_BUXRES1 = "/buxres"
 SlashCmdList["BUXRES"] = BuxResCommand
 
 --------------------------------------------------
--- BuxRes Minimap Button
+-- BuxRes Minimap Button (force visible + clickable)
 --------------------------------------------------
 
 local BUTTON_NAME = "BuxResMinimapButton"
 
 local function CreateBuxResButton()
-    if _G[BUTTON_NAME] then return end  -- don’t create twice
+    if _G[BUTTON_NAME] then return end
 
-    -- Create the button
+    -- Main button
     local btn = CreateFrame("Button", BUTTON_NAME, Minimap)
     btn:SetSize(32, 32)
-    btn:SetFrameStrata("MEDIUM")
+    btn:SetFrameStrata("HIGH")
     btn:SetFrameLevel(8)
-    btn:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
+    btn:EnableMouse(true)
+    btn:RegisterForClicks("AnyUp")
 
-    -- Icon
-    local tex = btn:CreateTexture(nil, "BACKGROUND")
+    -- Background circle (so it’s always visible)
+    local bg = btn:CreateTexture(nil, "BACKGROUND")
+    bg:SetTexture("Interface\\Minimap\\UI-Minimap-Background")
+    bg:SetAllPoints(btn)
+
+    -- Our icon (dwarf head)
+    local tex = btn:CreateTexture(nil, "ARTWORK")
     tex:SetTexture("Interface\\Icons\\INV_Misc_Head_Dwarf_02")
+    tex:SetTexCoord(0.07, 0.93, 0.07, 0.93) -- crop borders
     tex:SetAllPoints(btn)
 
-    -- Position (right side of minimap)
-    btn:SetPoint("TOPLEFT", Minimap, "TOPLEFT", 54, -54)
+    -- Highlight when hovered
+    local hl = btn:CreateTexture(nil, "HIGHLIGHT")
+    hl:SetTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
+    hl:SetAllPoints(btn)
+
+    -- Place at fixed spot (top-right of minimap)
+    btn:SetPoint("TOPRIGHT", Minimap, "TOPRIGHT", -10, -10)
 
     --------------------------------------------------
     -- Tooltip
@@ -239,33 +251,27 @@ local function CreateBuxResButton()
     btn:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
         GameTooltip:AddLine("BuxRes Commands", 1, 1, 1)
-        GameTooltip:AddLine("/buxres show - Show resistances")
-        GameTooltip:AddLine("/buxres hide - Hide window")
-        GameTooltip:AddLine("/buxres config - Open settings")
+        GameTooltip:AddLine("/buxres", 0.8, 0.8, 0.8)
+        GameTooltip:AddLine("/buxres [school]", 0.8, 0.8, 0.8)
         GameTooltip:Show()
     end)
-
-    btn:SetScript("OnLeave", function()
-        GameTooltip:Hide()
-    end)
+    btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
     --------------------------------------------------
-    -- Click Handling
+    -- Clicks
     --------------------------------------------------
     btn:SetScript("OnClick", function(self, button)
         if button == "LeftButton" then
-            ChatFrame1:AddMessage("|cff00ff00BuxRes:|r Left click!")
-            -- Here you could call your addon’s main toggle function
+            printSimpleOverview()
         elseif button == "RightButton" then
-            ChatFrame1:AddMessage("|cff00ff00BuxRes:|r Right click!")
-            -- Maybe open config?
+            ChatFrame1:AddMessage("|cff00ff00BuxRes:|r Right click (future menu here)")
         end
     end)
 
     btn:Show()
 end
 
--- Create after login
+-- Hook after login
 local f = CreateFrame("Frame")
 f:RegisterEvent("PLAYER_LOGIN")
 f:SetScript("OnEvent", CreateBuxResButton)

@@ -210,7 +210,7 @@ SLASH_BUXRES1 = "/buxres"
 SlashCmdList["BUXRES"] = BuxResCommand
 
 --------------------------------------------------
--- Circular Minimap Button
+-- Circular Minimap Button with Right-Click Menu
 --------------------------------------------------
 
 local function CreateMinimapButton()
@@ -226,9 +226,9 @@ local function CreateMinimapButton()
     BuxResMinimapButton:SetFrameStrata("MEDIUM")
     BuxResMinimapButton:SetFrameLevel(8)
 
-    -- Icon (replace texture if you like)
+    -- Visible black icon
     BuxResMinimapButton.icon = BuxResMinimapButton:CreateTexture(nil,"BACKGROUND")
-    BuxResMinimapButton.icon:SetTexture("Interface\\Icons\\INV_Inscription_Tradeskill01")
+    BuxResMinimapButton.icon:SetColorTexture(0,0,0,1) -- black
     BuxResMinimapButton.icon:SetAllPoints(BuxResMinimapButton)
 
     -- Position update function
@@ -260,18 +260,29 @@ local function CreateMinimapButton()
     BuxResMinimapButton:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
         GameTooltip:AddLine("BuxbrewResist",1,1,0)
-        GameTooltip:AddLine("Click: Show resistance overview")
-        GameTooltip:AddLine("Drag: Move button around minimap")
+        GameTooltip:AddLine("Left-Click: Simple overview")
+        GameTooltip:AddLine("Right-Click: Choose resistance")
+        GameTooltip:AddLine("Drag: Move button")
         GameTooltip:Show()
     end)
     BuxResMinimapButton:SetScript("OnLeave", function(self)
         GameTooltip:Hide()
     end)
 
-    -- Click
+    -- Click: left = simple overview, right = dropdown
     BuxResMinimapButton:SetScript("OnClick", function(self, button)
         if button == "LeftButton" then
             printSimpleOverview()
+        elseif button == "RightButton" then
+            local menu = {}
+            for _, data in pairs(schoolMap) do
+                table.insert(menu, {
+                    text = data.name,
+                    func = function() printSchoolInfo(data.id, data.name) end,
+                })
+            end
+            -- Show menu near cursor
+            EasyMenu(menu, BuxResMinimapButton.menuFrame or CreateFrame("Frame", "BuxResMinimapButtonMenu", UIParent, "UIDropDownMenuTemplate"), "cursor", 0 , 0, "MENU")
         end
     end)
 end
@@ -284,4 +295,3 @@ f:SetScript("OnEvent", function(self, event)
         CreateMinimapButton()
     end
 end)
-

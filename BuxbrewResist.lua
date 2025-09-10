@@ -210,28 +210,62 @@ SLASH_BUXRES1 = "/buxres"
 SlashCmdList["BUXRES"] = BuxResCommand
 
 --------------------------------------------------
--- Simple Minimap Button (Clickable, Tooltip)
+-- BuxRes Minimap Button
 --------------------------------------------------
 
-local function CreateMinimapButton()
-    DEFAULT_CHAT_FRAME:AddMessage("BuxRes: Creating minimap button...")
+local BUTTON_NAME = "BuxResMinimapButton"
 
-    local btn = CreateFrame("Button", "BuxResMinimapButton", UIParent)
+local function CreateBuxResButton()
+    if _G[BUTTON_NAME] then return end  -- don’t create twice
+
+    -- Create the button
+    local btn = CreateFrame("Button", BUTTON_NAME, Minimap)
     btn:SetSize(32, 32)
-    btn:SetFrameStrata("HIGH")
-    btn:SetFrameLevel(10)
-    btn:EnableMouse(true)
+    btn:SetFrameStrata("MEDIUM")
+    btn:SetFrameLevel(8)
+    btn:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
 
-    local tex = btn:CreateTexture(nil, "ARTWORK")
-    tex:SetColorTexture(1, 0, 0, 1) -- bright red
-    tex:SetAllPoints()
+    -- Icon
+    local tex = btn:CreateTexture(nil, "BACKGROUND")
+    tex:SetTexture("Interface\\Icons\\INV_Misc_Head_Dwarf_02")
+    tex:SetAllPoints(btn)
 
-    -- Attach to minimap by anchoring
-    btn:SetPoint("CENTER", Minimap, "CENTER", 40, 0)
+    -- Position (right side of minimap)
+    btn:SetPoint("TOPLEFT", Minimap, "TOPLEFT", 54, -54)
+
+    --------------------------------------------------
+    -- Tooltip
+    --------------------------------------------------
+    btn:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+        GameTooltip:AddLine("BuxRes Commands", 1, 1, 1)
+        GameTooltip:AddLine("/buxres show - Show resistances")
+        GameTooltip:AddLine("/buxres hide - Hide window")
+        GameTooltip:AddLine("/buxres config - Open settings")
+        GameTooltip:Show()
+    end)
+
+    btn:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
+
+    --------------------------------------------------
+    -- Click Handling
+    --------------------------------------------------
+    btn:SetScript("OnClick", function(self, button)
+        if button == "LeftButton" then
+            ChatFrame1:AddMessage("|cff00ff00BuxRes:|r Left click!")
+            -- Here you could call your addon’s main toggle function
+        elseif button == "RightButton" then
+            ChatFrame1:AddMessage("|cff00ff00BuxRes:|r Right click!")
+            -- Maybe open config?
+        end
+    end)
 
     btn:Show()
 end
 
+-- Create after login
 local f = CreateFrame("Frame")
 f:RegisterEvent("PLAYER_LOGIN")
-f:SetScript("OnEvent", CreateMinimapButton)
+f:SetScript("OnEvent", CreateBuxResButton)

@@ -1,0 +1,8 @@
+## Interface: 11200
+## Title: BuxbrewResist
+## Notes: Enhances resistance tooltips with detailed % info vs. same-level creatures.
+## Author: Buxbrew
+## Version: 1.0
+## SavedVariables: 
+
+BuxbrewResist.lua

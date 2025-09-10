@@ -111,7 +111,10 @@ end
 local function printSchoolInfo(schoolID, schoolName)
     -- Skip Physical and Holy detailed view
     if schoolName == "Physical" then
-        DEFAULT_CHAT_FRAME:AddMessage("|cffffff00["..schoolName.."]|r: "..(getResistanceValue(schoolID) or "N/A").." (Armor reduction formula applies)")
+        local resist = getResistanceValue(schoolID) or 0
+        local playerLevel = UnitLevel("player") or 1
+        local dmgReduction = resist / (resist + 400 + 85 * playerLevel)
+        DEFAULT_CHAT_FRAME:AddMessage("|cffffff00["..schoolName.."]|r: "..resist.." - "..fmtPercent(dmgReduction,1).." (Armor reduction)")
         return
     elseif schoolName == "Holy" then
         DEFAULT_CHAT_FRAME:AddMessage("|cffffff00["..schoolName.."]|r: "..(getResistanceValue(schoolID) or "N/A").." (No resist rolls)")
@@ -162,9 +165,8 @@ local function printSimpleOverview()
         local resist = getResistanceValue(data.id)
         if resist then
             if data.name == "Physical" then
-                -- Calculate damage reduction
                 local dmgReduction = resist / (resist + 400 + 85 * playerLevel)
-                DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": "..resist.." - "..fmtPercent(dmgReduction,1))
+                DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": "..resist.." - "..fmtPercent(dmgReduction,1).." (Armor reduction)")
             elseif data.name == "Holy" then
                 DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": "..resist.." (No damage reduction)")
             else

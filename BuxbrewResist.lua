@@ -172,8 +172,7 @@ local function BuxResCommand(msg)
 
     local found = nil
     for k, v in pairs(schoolMap) do
-        local len = math.min(string.len(k), string.len(msg))
-        if k:sub(1, len) == msg:sub(1, len) then
+        if string.find(k, msg) == 1 then
             found = v
             break
         end

@@ -162,9 +162,11 @@ local function printSimpleOverview()
         local resist = getResistanceValue(data.id)
         if resist then
             if data.name == "Physical" then
-                DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": "..resist.." (Armor reduction formula applies)")
+                -- Calculate damage reduction
+                local dmgReduction = resist / (resist + 400 + 85 * playerLevel)
+                DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": "..resist.." - "..fmtPercent(dmgReduction,1))
             elseif data.name == "Holy" then
-                DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": "..resist.." (No resist rolls)")
+                DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": "..resist.." (No damage reduction)")
             else
                 local AR = computeAverageResist(resist, playerLevel)
                 DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": "..resist.." - "..fmtPercent(AR,2))

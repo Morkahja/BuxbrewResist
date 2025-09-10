@@ -20,7 +20,6 @@ local function clamp(v, lo, hi)
     return v
 end
 
--- Average resist vs same-level caster
 local function computeAverageResist(resistValue, casterLevel)
     if not casterLevel or casterLevel < 1 then casterLevel = 1 end
     if casterLevel < 20 then casterLevel = 20 end
@@ -30,7 +29,6 @@ local function computeAverageResist(resistValue, casterLevel)
     return ar
 end
 
--- Format percentage (Lua 5.0/5.1 safe)
 local function fmtPercent(v, decimals)
     if not decimals then decimals = 1 end
     local mult = 10 ^ decimals
@@ -42,7 +40,6 @@ end
 -- Probability distribution
 --------------------------------------------------
 
--- Build distribution in 10% steps using triangular kernel
 local function build10PctDistribution(AR)
     local weights = {}
     local sum = 0
@@ -66,13 +63,12 @@ local function build10PctDistribution(AR)
     return probs
 end
 
--- Aggregate into 0/25/50/75/100 buckets
 local function aggregateTo25Buckets(probs10)
     local buckets = {}
-    buckets[0]   = 0
-    buckets[25]  = 0
-    buckets[50]  = 0
-    buckets[75]  = 0
+    buckets[0] = 0
+    buckets[25] = 0
+    buckets[50] = 0
+    buckets[75] = 0
     buckets[100] = 0
 
     for i = 0, 10 do
@@ -99,7 +95,6 @@ end
 --------------------------------------------------
 
 local function getResistanceValue(schoolID)
-    -- Protect against invalid indices
     local base, total, bonus = UnitResistance("player", schoolID)
     if total == nil then
         return nil
@@ -119,13 +114,11 @@ local function printSchoolInfo(schoolID, schoolName)
     end
 
     local playerLevel = UnitLevel("player") or 1
-    local casterLevel = playerLevel
-    local AR = computeAverageResist(resist, casterLevel)
+    local AR = computeAverageResist(resist, playerLevel)
 
     local probs10 = build10PctDistribution(AR)
     local buckets25 = aggregateTo25Buckets(probs10)
 
-    -- Expected value check
     local expected = 0
     for i = 0, 10 do
         local x = i / 10
@@ -133,7 +126,6 @@ local function printSchoolInfo(schoolID, schoolName)
         expected = expected + x * p
     end
 
-    -- Print results
     DEFAULT_CHAT_FRAME:AddMessage("|cffffff00["..schoolName.."]|r Resist: "..resist.." (Player level "..playerLevel..")")
     DEFAULT_CHAT_FRAME:AddMessage("  Average resist vs same-level caster: |cff00ff00"..fmtPercent(AR,2).."|r (max 75%)")
     DEFAULT_CHAT_FRAME:AddMessage("  Detailed (10% increments):")

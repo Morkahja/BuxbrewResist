@@ -210,89 +210,88 @@ SLASH_BUXRES1 = "/buxres"
 SlashCmdList["BUXRES"] = BuxResCommand
 
 --------------------------------------------------
--- Circular Minimap Button with Female Dwarf Icon
+-- Circular Minimap Button (Visible)
 --------------------------------------------------
 
 local function CreateMinimapButton()
-    if not Minimap then return end -- safeguard
-
     BuxResDB = BuxResDB or {}
     if not BuxResDB.minimapAngle then BuxResDB.minimapAngle = 45 end
 
-    local radius = 80 -- distance from minimap center
+    local radius = 80
 
     -- Create the button
-    local btn = CreateFrame("Button", "BuxResMinimapButton", Minimap)
+    local btn = CreateFrame("Button", "BuxResMinimapButton", UIParent)
     btn:SetSize(32,32)
     btn:SetFrameStrata("MEDIUM")
     btn:SetFrameLevel(8)
 
-    -- Female dwarf icon (Moira Thaurissan)
-    btn.texture = btn:CreateTexture(nil, "BACKGROUND")
-    btn.texture:SetAllPoints()
-    btn.texture:SetTexture("Interface\\Icons\\INV_Misc_Horn_01") -- Placeholder texture
-    btn.texture:SetTexCoord(0.1, 0.9, 0.1, 0.9) -- Adjust the texture coordinates
+    -- Make it visible (black circle)
+    local tex = btn:CreateTexture(nil,"BACKGROUND")
+    tex:SetAllPoints()
+    tex:SetColorTexture(0,0,0,1)
 
-    -- Position update function
+    -- Position relative to Minimap after a slight delay
     local function updatePosition()
-        local angleRad = math.rad(BuxResDB.minimapAngle)
-        local x = radius * math.cos(angleRad)
-        local y = radius * math.sin(angleRad)
-        btn:SetPoint("CENTER", Minimap, "CENTER", x, y)
+        if Minimap then
+            local angleRad = math.rad(BuxResDB.minimapAngle)
+            local x = radius * math.cos(angleRad)
+            local y = radius * math.sin(angleRad)
+            btn:SetPoint("CENTER", Minimap, "CENTER", x, y)
+        end
     end
-    updatePosition()
+
+    -- Initial position
+    C_Timer.After(0.5, updatePosition)  -- small delay ensures Minimap exists
 
     -- Dragging
     btn:RegisterForDrag("LeftButton")
-    btn:SetScript("OnDragStart", btn.StartMoving)
+    btn:SetScript("OnDragStart", function(self) self:StartMoving() end)
     btn:SetScript("OnDragStop", function(self)
         self:StopMovingOrSizing()
-        local mx, my = Minimap:GetCenter()
-        local px, py = GetCursorPosition()
-        local scale = UIParent:GetEffectiveScale()
-        local dx = (px/scale - mx)
-        local dy = (py/scale - my)
-        BuxResDB.minimapAngle = math.deg(math.atan2(dy, dx))
-        updatePosition()
+        if Minimap then
+            local mx,my = Minimap:GetCenter()
+            local px,py = GetCursorPosition()
+            local scale = UIParent:GetEffectiveScale()
+            local dx = (px/scale - mx)
+            local dy = (py/scale - my)
+            BuxResDB.minimapAngle = math.deg(math.atan2(dy, dx))
+            updatePosition()
+        end
     end)
 
     -- Tooltip
     btn:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-        GameTooltip:AddLine("BuxbrewResist", 1, 1, 0)
+        GameTooltip:SetOwner(self,"ANCHOR_LEFT")
+        GameTooltip:AddLine("BuxbrewResist",1,1,0)
         GameTooltip:AddLine("Left-Click: Simple overview")
         GameTooltip:AddLine("Right-Click: Choose resistance")
         GameTooltip:AddLine("Drag: Move button")
         GameTooltip:Show()
     end)
-    btn:SetScript("OnLeave", function(self)
-        GameTooltip:Hide()
-    end)
+    btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
-    -- Click actions
-    btn:SetScript("OnClick", function(self, button)
+    -- Click: left = simple overview, right = dropdown
+    btn:SetScript("OnClick", function(self,button)
         if button == "LeftButton" then
             printSimpleOverview()
         elseif button == "RightButton" then
             local menu = {}
             for _, data in pairs(schoolMap) do
-                table.insert(menu, {
+                table.insert(menu,{
                     text = data.name,
-                    func = function() printSchoolInfo(data.id, data.name) end,
-                    notCheckable = true,
+                    func = function() printSchoolInfo(data.id,data.name) end,
+                    notCheckable=true
                 })
             end
-            local menuFrame = CreateFrame("Frame", "BuxResMinimapButtonMenu", UIParent, "UIDropDownMenuTemplate")
-            EasyMenu(menu, menuFrame, "cursor", 0, 0, "MENU")
+            local menuFrame = CreateFrame("Frame","BuxResMinimapButtonMenu",UIParent,"UIDropDownMenuTemplate")
+            EasyMenu(menu,menuFrame,"cursor",0,0,"MENU")
         end
     end)
 end
 
--- Create button after PLAYER_LOGIN to ensure Minimap exists
+-- Ensure Minimap exists after login
 local f = CreateFrame("Frame")
 f:RegisterEvent("PLAYER_LOGIN")
-f:SetScript("OnEvent", function(self, event)
-    if event == "PLAYER_LOGIN" then
-        CreateMinimapButton()
-    end
+f:SetScript("OnEvent", function()
+    C_Timer.After(0.5, CreateMinimapButton) -- small delay to ensure Minimap exists
 end)

@@ -210,10 +210,12 @@ SLASH_BUXRES1 = "/buxres"
 SlashCmdList["BUXRES"] = BuxResCommand
 
 --------------------------------------------------
--- Circular Minimap Button with Right-Click Menu
+-- Circular Minimap Button with Female Dwarf Icon
 --------------------------------------------------
 
 local function CreateMinimapButton()
+    if not Minimap then return end -- safeguard
+
     BuxResDB = BuxResDB or {}
     if not BuxResDB.minimapAngle then BuxResDB.minimapAngle = 45 end
 
@@ -225,12 +227,13 @@ local function CreateMinimapButton()
     btn:SetFrameStrata("MEDIUM")
     btn:SetFrameLevel(8)
 
-    -- Black visible circle
+    -- Female dwarf icon (Moira Thaurissan)
     btn.texture = btn:CreateTexture(nil, "BACKGROUND")
     btn.texture:SetAllPoints()
-    btn.texture:SetColorTexture(0,0,0,1) -- solid black
+    btn.texture:SetTexture("Interface\\Icons\\INV_Misc_Horn_01") -- Placeholder texture
+    btn.texture:SetTexCoord(0.1, 0.9, 0.1, 0.9) -- Adjust the texture coordinates
 
-    -- Position function
+    -- Position update function
     local function updatePosition()
         local angleRad = math.rad(BuxResDB.minimapAngle)
         local x = radius * math.cos(angleRad)
@@ -256,7 +259,7 @@ local function CreateMinimapButton()
     -- Tooltip
     btn:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-        GameTooltip:AddLine("BuxbrewResist",1,1,0)
+        GameTooltip:AddLine("BuxbrewResist", 1, 1, 0)
         GameTooltip:AddLine("Left-Click: Simple overview")
         GameTooltip:AddLine("Right-Click: Choose resistance")
         GameTooltip:AddLine("Drag: Move button")
@@ -280,7 +283,7 @@ local function CreateMinimapButton()
                 })
             end
             local menuFrame = CreateFrame("Frame", "BuxResMinimapButtonMenu", UIParent, "UIDropDownMenuTemplate")
-            EasyMenu(menu, menuFrame, "cursor", 0 , 0, "MENU")
+            EasyMenu(menu, menuFrame, "cursor", 0, 0, "MENU")
         end
     end)
 end
@@ -293,4 +296,3 @@ f:SetScript("OnEvent", function(self, event)
         CreateMinimapButton()
     end
 end)
-

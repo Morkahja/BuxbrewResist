@@ -214,74 +214,35 @@ SlashCmdList["BUXRES"] = BuxResCommand
 --------------------------------------------------
 
 local function CreateMinimapButton()
-    -- Ensure saved variables
-    BuxResDB = BuxResDB or {}
-    if not BuxResDB.minimapAngle then BuxResDB.minimapAngle = 45 end
-
-    -- Create the button
     local btn = CreateFrame("Button", "BuxResMinimapButton", Minimap)
     btn:SetSize(32, 32)
     btn:SetFrameStrata("MEDIUM")
     btn:SetFrameLevel(8)
     btn:EnableMouse(true)
-    
-    -- Icon texture
-    local icon = btn:CreateTexture(nil, "BACKGROUND")
-    icon:SetAllPoints()
-    icon:SetTexture("Interface\\ICONS\\INV_Misc_Head_Dwarf_02.blp")
 
-    -- Border (standard minimap button style)
+    -- Icon
+    local icon = btn:CreateTexture(nil, "ARTWORK")
+    icon:SetTexture("Interface\\ICONS\\INV_Misc_Head_Dwarf_02")
+    icon:SetSize(20, 20)
+    icon:SetPoint("CENTER")
+    icon:Show()
+
+    -- Border
     local border = btn:CreateTexture(nil, "OVERLAY")
     border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
     border:SetSize(54, 54)
     border:SetPoint("TOPLEFT", btn, "TOPLEFT", -10, 10)
 
-    -- Position button around minimap
-    local radius = 80
-    local angleRad = math.rad(BuxResDB.minimapAngle)
-    local x = radius * math.cos(angleRad)
-    local y = radius * math.sin(angleRad)
-    btn:SetPoint("CENTER", Minimap, "CENTER", x, y)
-    
-    -- Ensure button is shown
+    -- Position
+    btn:SetPoint("CENTER", Minimap, "CENTER", 80, 0)
+
     btn:Show()
-
-    -- Persistent menu frame
-    local menuFrame = CreateFrame("Frame", "BuxResMinimapButtonMenu", UIParent, "UIDropDownMenuTemplate")
-
-    -- Tooltip
-    btn:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-        GameTooltip:ClearLines()
-        GameTooltip:AddLine("BuxbrewRes", 1, 1, 0)
-        GameTooltip:AddLine("Left-Click: Simple overview")
-        GameTooltip:AddLine("Right-Click: Choose resistance")
-        GameTooltip:Show()
-    end)
-    btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
-
-    -- Click handlers
-    btn:SetScript("OnClick", function(self, button)
-        if button == "LeftButton" then
-            printSimpleOverview()
-        elseif button == "RightButton" then
-            local menu = {}
-            for _, data in pairs(schoolMap) do
-                table.insert(menu, {
-                    text = data.name,
-                    func = function() printSchoolInfo(data.id, data.name) end,
-                    notCheckable = true
-                })
-            end
-            EasyMenu(menu, menuFrame, "cursor", 0, 0, "MENU")
-        end
-    end)
 end
 
--- Create button after PLAYER_LOGIN to ensure Minimap exists
 local f = CreateFrame("Frame")
 f:RegisterEvent("PLAYER_LOGIN")
 f:SetScript("OnEvent", function()
     CreateMinimapButton()
 end)
+
 

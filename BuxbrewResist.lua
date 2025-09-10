@@ -154,3 +154,36 @@ local function printSimpleOverview()
             DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": "..resist)
         else
             DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": N/A")
+        end
+    end
+end
+
+--------------------------------------------------
+-- Slash command
+--------------------------------------------------
+
+local function BuxResCommand(msg)
+    msg = string.lower(msg or "")
+
+    if msg == "" then
+        printSimpleOverview()
+        return
+    end
+
+    local found = nil
+    for k, v in pairs(schoolMap) do
+        if k:sub(1, string.len(msg)) == msg then
+            found = v
+            break
+        end
+    end
+
+    if found then
+        printSchoolInfo(found.id, found.name)
+    else
+        DEFAULT_CHAT_FRAME:AddMessage("|cffff0000Usage:|r /buxres [physical|holy|fire|nature|frost|shadow|arcane]")
+    end
+end
+
+SLASH_BUXRES1 = "/buxres"
+SlashCmdList["BUXRES"] = BuxResCommand

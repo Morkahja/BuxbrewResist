@@ -19,8 +19,7 @@ local function GetResistanceInfo(school)
     return resist, avgResist
 end
 
--- Hook resistance frame OnEnter manually (Vanilla compatible)
-local function ResistanceTooltipHook(self)
+local function AddResistTooltipInfo(self)
     local school = self:GetID()
     if not school or school == 0 then return end -- skip physical
 
@@ -31,10 +30,14 @@ local function ResistanceTooltipHook(self)
     GameTooltip:Show()
 end
 
--- Attach hook to each resistance frame
-for i=1, 5 do
+-- Attach hook to each resistance frame (Vanilla way)
+for i = 1, 5 do
     local frame = getglobal("MagicResFrame"..i)
     if frame then
-        frame:HookScript("OnEnter", ResistanceTooltipHook)
+        local oldOnEnter = frame:GetScript("OnEnter")
+        frame:SetScript("OnEnter", function(self)
+            if oldOnEnter then oldOnEnter(self) end
+            AddResistTooltipInfo(self)
+        end)
     end
 end

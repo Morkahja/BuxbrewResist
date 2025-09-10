@@ -2,8 +2,6 @@
 -- Adds more detailed resistance information to tooltips.
 
 local function GetResistanceInfo(school)
-    -- UnitResistance("unit", school)
-    -- school: 0=Physical, 2=Holy, 3=Fire, 4=Nature, 5=Frost, 6=Shadow, 7=Arcane
     local base, total, bonus = UnitResistance("player", school)
     local level = UnitLevel("player")
     local resist = total or 0
@@ -21,8 +19,8 @@ local function GetResistanceInfo(school)
     return resist, avgResist
 end
 
--- Hook resistance tooltips on character frame
-hooksecurefunc("CharacterResistanceFrame_OnEnter", function(self)
+-- Hook resistance frame OnEnter manually (Vanilla compatible)
+local function ResistanceTooltipHook(self)
     local school = self:GetID()
     if not school or school == 0 then return end -- skip physical
 
@@ -31,4 +29,12 @@ hooksecurefunc("CharacterResistanceFrame_OnEnter", function(self)
     GameTooltip:AddLine(" ")
     GameTooltip:AddLine("|cff00ff00Vs. same level:|r ~"..avg.."% average resist", 0.1, 1, 0.1)
     GameTooltip:Show()
-end)
+end
+
+-- Attach hook to each resistance frame
+for i=1, 5 do
+    local frame = getglobal("MagicResFrame"..i)
+    if frame then
+        frame:HookScript("OnEnter", ResistanceTooltipHook)
+    end
+end

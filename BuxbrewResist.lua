@@ -214,35 +214,22 @@ SlashCmdList["BUXRES"] = BuxResCommand
 --------------------------------------------------
 
 local function CreateMinimapButton()
+    DEFAULT_CHAT_FRAME:AddMessage("BuxRes: Creating minimap button...")
+
     local btn = CreateFrame("Button", "BuxResMinimapButton", Minimap)
     btn:SetSize(32, 32)
-    btn:SetFrameStrata("MEDIUM")
-    btn:SetFrameLevel(8)
+    btn:SetFrameStrata("HIGH")
+    btn:SetFrameLevel(10)
     btn:EnableMouse(true)
 
-    -- Icon
-    local icon = btn:CreateTexture(nil, "ARTWORK")
-    icon:SetTexture("Interface\\ICONS\\INV_Misc_Head_Dwarf_02")
-    icon:SetSize(20, 20)
-    icon:SetPoint("CENTER")
-    icon:Show()
+    local tex = btn:CreateTexture(nil, "ARTWORK")
+    tex:SetColorTexture(1, 0, 0, 1) -- bright red
+    tex:SetAllPoints()
 
-    -- Border
-    local border = btn:CreateTexture(nil, "OVERLAY")
-    border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
-    border:SetSize(54, 54)
-    border:SetPoint("TOPLEFT", btn, "TOPLEFT", -10, 10)
-
-    -- Position
-    btn:SetPoint("CENTER", Minimap, "CENTER", 80, 0)
-
+    btn:SetPoint("CENTER", Minimap, "CENTER", 40, 0)
     btn:Show()
 end
 
 local f = CreateFrame("Frame")
 f:RegisterEvent("PLAYER_LOGIN")
-f:SetScript("OnEvent", function()
-    CreateMinimapButton()
-end)
-
-
+f:SetScript("OnEvent", CreateMinimapButton)

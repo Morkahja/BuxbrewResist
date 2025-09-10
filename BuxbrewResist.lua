@@ -80,10 +80,15 @@ local function aggregateTo25Buckets(probs10)
     return buckets
 end
 
+-- Format a decimal fraction (0..1) as percentage string
 local function fmtPercent(v, decimals)
-    decimals = decimals or 1
-    return string.format("%."..decimals.."f%%", v * 100)
+    if not decimals then decimals = 1 end
+    local mult = 10 ^ decimals
+    local rounded = math.floor(v * 100 * mult + 0.5) / mult
+    return tostring(rounded) .. "%"
 end
+
+
 
 local function printSchoolInfo(schoolID, schoolName)
     local base, total, bonus = UnitResistance("player", schoolID)

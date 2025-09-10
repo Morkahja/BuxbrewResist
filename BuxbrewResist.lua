@@ -226,7 +226,7 @@ local function CreateMinimapButton()
     BuxResMinimapButton:SetFrameStrata("MEDIUM")
     BuxResMinimapButton:SetFrameLevel(8)
 
-    -- Icon
+    -- Icon (replace texture if you like)
     BuxResMinimapButton.icon = BuxResMinimapButton:CreateTexture(nil,"BACKGROUND")
     BuxResMinimapButton.icon:SetTexture("Interface\\Icons\\INV_Inscription_Tradeskill01")
     BuxResMinimapButton.icon:SetAllPoints(BuxResMinimapButton)
@@ -276,7 +276,7 @@ local function CreateMinimapButton()
     end)
 end
 
--- Listen for PLAYER_LOGIN to safely create the button
+-- Create button after PLAYER_LOGIN to ensure Minimap exists
 local f = CreateFrame("Frame")
 f:RegisterEvent("PLAYER_LOGIN")
 f:SetScript("OnEvent", function(self, event)
@@ -284,5 +284,4 @@ f:SetScript("OnEvent", function(self, event)
         CreateMinimapButton()
     end
 end)
-
 

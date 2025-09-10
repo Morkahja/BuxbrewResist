@@ -1,9 +1,3 @@
-## Interface: 11200
-## Title: BuxbrewResist
-## Notes: Prints resistance info via /buxres command
-## Author: Buxbrew
-## Version: 1.2
-
 -- BuxbrewResist
 -- /buxres [fire|nature|frost|shadow|arcane]
 -- Prints detailed resistance breakdown in chat.

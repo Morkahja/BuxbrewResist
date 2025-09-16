@@ -1,6 +1,6 @@
 ## Interface: 11200
 ## Title: BuxbrewResist
-## Notes: Shows resistance info with /buxres and optional minimap button
+## Notes: Shows resistance info with /buxres
 ## Author: Buxbrew
 ## Version: 1.1
 ## SavedVariables: BuxResDB

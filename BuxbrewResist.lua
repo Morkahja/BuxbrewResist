@@ -1,9 +1,9 @@
 -- BuxbrewResist
 -- /buxres [physical|holy|fire|nature|frost|shadow|arcane]
--- Prints resistance info in chat and provides a minimap button.
+-- Prints resistance info in chat.
 
 --------------------------------------------------
--- Utility functions
+-- Utility
 --------------------------------------------------
 
 local schoolMap = {
@@ -26,23 +26,21 @@ local function computeAverageResist(resistValue, casterLevel)
     if not casterLevel or casterLevel < 1 then casterLevel = 1 end
     if casterLevel < 20 then casterLevel = 20 end
     local ar = (resistValue / (casterLevel * 5)) * 0.75
-    if ar < 0 then ar = 0 end
-    if ar > 0.75 then ar = 0.75 end
-    return ar
+    return clamp(ar, 0, 0.75)
 end
 
 local function fmtPercent(v, decimals)
-    if not decimals then decimals = 1 end
+    decimals = decimals or 1
     local mult = 10 ^ decimals
     local rounded = math.floor(v * 100 * mult + 0.5) / mult
     return tostring(rounded) .. "%"
 end
 
 --------------------------------------------------
--- Probability distribution
+-- Partial resist buckets (0/25/50/75/100)
 --------------------------------------------------
 
-local function build10PctDistribution(AR)
+local function buildBuckets(AR)
     local weights = {}
     local sum = 0
     for i = 0, 10 do
@@ -53,29 +51,15 @@ local function build10PctDistribution(AR)
         sum = sum + w
     end
 
-    local probs = {}
+    local buckets = { [0]=0, [25]=0, [50]=0, [75]=0, [100]=0 }
     if sum <= 0 then
-        for i = 0, 10 do probs[i] = 0 end
-        probs[0] = 1
-        return probs
+        buckets[0] = 1
+        return buckets
     end
-    for i = 0, 10 do
-        probs[i] = weights[i] / sum
-    end
-    return probs
-end
-
-local function aggregateTo25Buckets(probs10)
-    local buckets = {}
-    buckets[0] = 0
-    buckets[25] = 0
-    buckets[50] = 0
-    buckets[75] = 0
-    buckets[100] = 0
 
     for i = 0, 10 do
         local x = i / 10
-        local p = probs10[i] or 0
+        local p = weights[i] / sum
         if x < 0.125 then
             buckets[0] = buckets[0] + p
         elseif x < 0.375 then
@@ -88,19 +72,15 @@ local function aggregateTo25Buckets(probs10)
             buckets[100] = buckets[100] + p
         end
     end
-
     return buckets
 end
 
 --------------------------------------------------
--- Resistance retrieval
+-- Resistance values
 --------------------------------------------------
 
 local function getResistanceValue(schoolID)
     local base, total, bonus = UnitResistance("player", schoolID)
-    if total == nil then
-        return nil
-    end
     return total
 end
 
@@ -109,7 +89,6 @@ end
 --------------------------------------------------
 
 local function printSchoolInfo(schoolID, schoolName)
-    -- Skip Physical and Holy detailed view
     if schoolName == "Physical" then
         local resist = getResistanceValue(schoolID) or 0
         local playerLevel = UnitLevel("player") or 1
@@ -129,33 +108,24 @@ local function printSchoolInfo(schoolID, schoolName)
 
     local playerLevel = UnitLevel("player") or 1
     local AR = computeAverageResist(resist, playerLevel)
-
-    local probs10 = build10PctDistribution(AR)
-    local buckets25 = aggregateTo25Buckets(probs10)
+    local buckets = buildBuckets(AR)
 
     local expected = 0
-    for i = 0, 10 do
-        local x = i / 10
-        local p = probs10[i] or 0
-        expected = expected + x * p
+    for k,v in pairs(buckets) do
+        expected = expected + (k/100) * v
     end
 
     DEFAULT_CHAT_FRAME:AddMessage("|cffffff00["..schoolName.."]|r Resist: "..resist.." (Player level "..playerLevel..")")
-    DEFAULT_CHAT_FRAME:AddMessage("  Average resist vs same-level caster: |cff00ff00"..fmtPercent(AR,2).."|r (max 75%)")
-    DEFAULT_CHAT_FRAME:AddMessage("  Detailed (10% increments):")
-    for i = 0, 10 do
-        local x = i * 10
-        local p = probs10[i] or 0
-        DEFAULT_CHAT_FRAME:AddMessage("    "..x.."% resist: "..fmtPercent(p,2).." chance")
-    end
-    DEFAULT_CHAT_FRAME:AddMessage("  Aggregated (0/25/50/75/100):")
-    DEFAULT_CHAT_FRAME:AddMessage("    0% (full dmg): "..fmtPercent(buckets25[0] or 0,2))
-    DEFAULT_CHAT_FRAME:AddMessage("   25%: "..fmtPercent(buckets25[25] or 0,2))
-    DEFAULT_CHAT_FRAME:AddMessage("   50%: "..fmtPercent(buckets25[50] or 0,2))
-    DEFAULT_CHAT_FRAME:AddMessage("   75%: "..fmtPercent(buckets25[75] or 0,2))
-    DEFAULT_CHAT_FRAME:AddMessage("  100%: "..fmtPercent(buckets25[100] or 0,2))
+    DEFAULT_CHAT_FRAME:AddMessage("  Partial resists (direct damage):")
+    DEFAULT_CHAT_FRAME:AddMessage("    0% = "..fmtPercent(buckets[0],2).." (full damage)")
+    DEFAULT_CHAT_FRAME:AddMessage("   25% reduction = "..fmtPercent(buckets[25],2))
+    DEFAULT_CHAT_FRAME:AddMessage("   50% reduction = "..fmtPercent(buckets[50],2))
+    DEFAULT_CHAT_FRAME:AddMessage("   75% reduction = "..fmtPercent(buckets[75],2))
+    DEFAULT_CHAT_FRAME:AddMessage("  100% reduction = "..fmtPercent(buckets[100],2).." (full resist)")
     DEFAULT_CHAT_FRAME:AddMessage("  Expected avg reduction: |cff00ff00"..fmtPercent(expected,2).."|r")
-    DEFAULT_CHAT_FRAME:AddMessage("  |cffffa500Note:|r This covers resist rolls only. Spell hit/miss is separate.")
+
+    local binaryChance = AR
+    DEFAULT_CHAT_FRAME:AddMessage("  Direct resist (DoTs / CC): "..fmtPercent(binaryChance,2))
 end
 
 local function printSimpleOverview()
@@ -185,7 +155,6 @@ end
 
 local function BuxResCommand(msg)
     msg = string.lower(msg or "")
-
     if msg == "" then
         printSimpleOverview()
         return
@@ -208,4 +177,3 @@ end
 
 SLASH_BUXRES1 = "/buxres"
 SlashCmdList["BUXRES"] = BuxResCommand
-

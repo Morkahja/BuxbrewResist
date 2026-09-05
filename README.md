@@ -41,6 +41,3 @@ References used to check the integration and model:
 
 `/buxres` and `/buxres shadow` remain available.
 
-Regression checks use Python with `lupa.lua51`: run `python tests/test_tooltips.py`.
-An optional argument supplies a directory containing an installed `lupa` package.
-They mock WoW's frame API; actual in-game layout still needs visual verification.

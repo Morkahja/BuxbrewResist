@@ -4,6 +4,18 @@ After installing or editing, use `/reload`. Open your character panel and hover
 Arcane, Fire, Nature, Frost or Shadow resistance. Details are appended below the
 existing tooltip. Values are read again each time you hover.
 
+## Screenshots
+
+Nature resistance:
+
+![Nature resistance tooltip showing average damage reduction and resist chances](screenshots/nature-resistance.png)
+
+Shadow resistance:
+
+![Shadow resistance tooltip showing average damage reduction and resist chances](screenshots/shadow-resistance.png)
+
+## Tooltip details
+
 The main number is **Expected average reduction**, highlighted in green and
 calculated identically to `/buxres shadow`. Below it is a two-column breakdown:
 damage reduced per spell (0%, 25%, 50%, 75%, or full resist) and its estimated

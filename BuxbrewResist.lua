@@ -77,6 +77,11 @@ end
 
 -- Use the same legacy estimate for chat, tooltips and comparisons.
 local function expectedReduction(resistance, level)
+    -- CMaNGOS Classic vulnerability reference: defender level, no 0.75 factor.
+    -- This is an estimate; TurtleWoW server behavior has not been verified.
+    if resistance < 0 then
+        return resistance / (5 * math.max(level or 1, 20))
+    end
     local buckets = buildBuckets(computeAverageResist(resistance, level))
     local expected = 0
     for reduction, chance in pairs(buckets) do
@@ -118,7 +123,10 @@ local function printSchoolInfo(schoolID, schoolName)
 
     local playerLevel = UnitLevel("player") or 1
     if resist < 0 then
-        DEFAULT_CHAT_FRAME:AddMessage("|cffffff00["..schoolName.."]|r Resist: "..resist.." (Reduction estimate unavailable for negative resistance)")
+        local average = expectedReduction(resist, playerLevel)
+        DEFAULT_CHAT_FRAME:AddMessage("|cffffff00["..schoolName.."]|r Resist: "..resist.." (Legacy vulnerability estimate)")
+        DEFAULT_CHAT_FRAME:AddMessage("  Expected avg reduction: |cffff3333"..fmtPercent(average,2).."|r")
+        DEFAULT_CHAT_FRAME:AddMessage("  Extra damage taken: |cffff3333+"..fmtPercent(-average,2).."|r (estimate)")
         return
     end
     local AR = computeAverageResist(resist, playerLevel)
@@ -149,7 +157,8 @@ local function printSimpleOverview()
             elseif data.name == "Holy" then
                 DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": "..resist.." (No damage reduction)")
             elseif resist < 0 then
-                DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": "..resist.." (Reduction estimate unavailable for negative resistance)")
+                local average = expectedReduction(resist, playerLevel)
+                DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": "..resist.." - |cffff3333"..fmtPercent(average,2).."|r estimated average reduction (+"..fmtPercent(-average,2).." extra damage)")
             else
                 local expected = expectedReduction(resist, playerLevel)
                 DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": "..resist.." - "..fmtPercent(expected,2).." estimated average reduction")
@@ -221,7 +230,14 @@ local function appendResistanceTooltip(frame)
     GameTooltip:AddLine(schoolName .. " vs level " .. level .. " (estimates)", 1, 0.82, 0)
 
     if total < 0 then
-        row("Expected average reduction", "Unavailable")
+        local average = expectedReduction(total, level)
+        GameTooltip:AddDoubleLine("Expected average reduction", fmtPercent(average, 2),
+            1, 1, 1, 1, 0.2, 0.2)
+        GameTooltip:AddDoubleLine("Extra damage taken (estimate)", "+" .. fmtPercent(-average, 2),
+            0.85, 0.85, 0.85, 1, 0.2, 0.2)
+        GameTooltip:AddLine("Legacy vulnerability model; server behavior unverified.", 0.85, 0.85, 0.85)
+        row("Gain from +10 resistance", "+" .. fmtPercent(expectedReduction(total + 10, level) - average, 2))
+        row("Resistance cap", cap .. " (" .. math.max(0, cap - total) .. " more)")
         GameTooltip:Show()
         return
     end

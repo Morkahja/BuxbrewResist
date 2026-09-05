@@ -21,7 +21,7 @@ end
 GameTooltip = {lines = {}}
 function GameTooltip:IsOwned(frame) return self.owner == frame end
 function GameTooltip:AddLine(text) table.insert(self.lines, {text}) end
-function GameTooltip:AddDoubleLine(left, right) table.insert(self.lines, {left, right}) end
+function GameTooltip:AddDoubleLine(left, right, ...) table.insert(self.lines, {left, right, colors = {...}}) end
 function GameTooltip:Show() self.shown = true end
 messages = {}
 DEFAULT_CHAT_FRAME = {AddMessage = function(self, text) table.insert(messages, text) end}
@@ -103,7 +103,30 @@ hover(5)
 assert(valueFor("Resistance cap") == "100 (0 more)")
 values = {0, -10, 0, -10}
 hover(5)
-assert(valueFor("Expected average reduction") == "Unavailable")
+assert(valueFor("Expected average reduction") == "-10%")
+assert(valueFor("Extra damage taken (estimate)") == "+10%")
+assert(valueFor("Gain from +10 resistance") == "+10%")
+level = 60
+values = {0, -30, 0, -30}
+for i = 1, 5 do
+    hover(i)
+    assert(valueFor("Expected average reduction") == "-10%")
+    assert(valueFor("Extra damage taken (estimate)") == "+10%")
+    assert(valueFor("Damage reduced per spell") == nil)
+    for _, line in ipairs(GameTooltip.lines) do
+        if line[1] == "Expected average reduction" then
+            assert(line.colors[4] == 1 and line.colors[5] == 0.2 and line.colors[6] == 0.2, "Negative average must be red")
+        end
+    end
+end
+values = {0, -5, 0, -5}
+hover(2)
+assert(valueFor("Expected average reduction") == "-1.67%")
+assert(tonumber(string.sub(valueFor("Gain from +10 resistance"), 2, -2)) > 1.67)
+values = {0, 0, 0, 0}
+hover(2)
+assert(valueFor("Expected average reduction") == "0%")
+assert(valueFor("Extra damage taken (estimate)") == nil)
 values = {}
 hover(5)
 assert(#GameTooltip.lines == 2, "Missing values should keep only the original tooltip")
@@ -133,12 +156,13 @@ assert(string.find(messages[1], "Resistance Overview", 1, true))
 values = {0, -10, 0, -10}
 messages = {}
 SlashCmdList.BUXRES("shadow")
-assert(#messages == 1 and string.find(messages[1], "unavailable for negative resistance", 1, true))
+assert(#messages == 3 and string.find(messages[2], "|cffff3333-3.33%|r", 1, true))
+assert(string.find(messages[3], "+3.33%", 1, true))
 messages = {}
 SlashCmdList.BUXRES("")
 local negativeSchools = 0
 for _, text in ipairs(messages) do
-    if string.find(text, "unavailable for negative resistance", 1, true) then
+    if string.find(text, "|cffff3333-3.33%|r", 1, true) then
         negativeSchools = negativeSchools + 1
     end
 end

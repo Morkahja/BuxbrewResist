@@ -35,7 +35,7 @@ The added section shows:
 - **Average vs level +3:** the estimate against an attacker three levels above you.
 - **Resistance cap:** the cap used by the model against an attacker of your level, followed by how much more resistance you need to reach it.
 
-The main estimate assumes an attacker at your level. Negative resistance is shown without a numerical damage-reduction estimate.
+The main estimate assumes an attacker at your level. **Negative resistance shows a negative reduction in red**, plus an **Extra damage taken (estimate)** row. For example, at level 60, -30 Fire resistance gives an estimated -10% reduction: a 100-damage Fire hit would become 110 damage before other modifiers. The partial-resist table is hidden while resistance is negative.
 
 ## Chat commands
 
@@ -55,6 +55,8 @@ These numbers come from a legacy approximation, **not measured TurtleWoW server 
 For readers interested in the calculation, the model starts with `min(0.75, max(0, resistance / (5 * max(attackerLevel, 20)) * 0.75))`, builds a distribution of partial-resist outcomes, and weights each outcome by its chance. The displayed average can differ from that starting value. Chat, tooltips, and the +10 comparison use the same weighted-average calculation.
 
 Implementation references:
+
+For negative resistance, the vulnerability estimate is `resistance / (5 * max(playerLevel, 20))`. This follows the CMaNGOS Classic reference implementation: it uses your level and does not apply the positive-resistance formula's 0.75 multiplier. It is not confirmed for TurtleWoW. The same negative estimate is used in tooltips and chat.
 
 - [Vanilla character resistance tooltip scripts](https://github.com/MOUZU/Blizzard-WoW-Interface/blob/master/1.12.1/FrameXML/PaperDollFrame.xml)
 - [CMaNGOS Classic resistance implementation](https://github.com/cmangos/mangos-classic/blob/master/src/game/Entities/Unit.cpp), `CalculateEffectiveMagicResistancePercent` and `CalculateSpellResistChance`. This is a reference implementation, not confirmation of TurtleWoW's behavior.

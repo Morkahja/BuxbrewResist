@@ -110,5 +110,38 @@ assert(#GameTooltip.lines == 2, "Missing values should keep only the original to
 values = {0, 25, 25, 0}
 SlashCmdList.BUXRES("shadow")
 SlashCmdList.BUXRES("")
+-- Treat user input as literal text, never as a Lua pattern.
+for _, input in ipairs({"[", "%", ".", "sh.*", "unknown"}) do
+    messages = {}
+    SlashCmdList.BUXRES(input)
+    assert(#messages == 1 and string.find(messages[1], "Usage:", 1, true))
+end
+messages = {}
+SlashCmdList.BUXRES("  ShAdOw  ")
+assert(string.find(messages[1], "[Shadow]", 1, true))
+messages = {}
+SlashCmdList.BUXRES("f")
+assert(#messages == 1 and string.find(messages[1], "Ambiguous school:", 1, true))
+for input, name in pairs({fi = "Fire", fr = "Frost", sh = "Shadow"}) do
+    messages = {}
+    SlashCmdList.BUXRES(input)
+    assert(string.find(messages[1], "[" .. name .. "]", 1, true))
+end
+messages = {}
+SlashCmdList.BUXRES("   ")
+assert(string.find(messages[1], "Resistance Overview", 1, true))
+values = {0, -10, 0, -10}
+messages = {}
+SlashCmdList.BUXRES("shadow")
+assert(#messages == 1 and string.find(messages[1], "unavailable for negative resistance", 1, true))
+messages = {}
+SlashCmdList.BUXRES("")
+local negativeSchools = 0
+for _, text in ipairs(messages) do
+    if string.find(text, "unavailable for negative resistance", 1, true) then
+        negativeSchools = negativeSchools + 1
+    end
+end
+assert(negativeSchools == 5, "All magic schools must handle negative resistance consistently")
 ''')
 print("PASS: Lua 5.1 load, all five schools, original text, live reads on hover, repeated installation, zero/cap/low-level/negative/missing values, slash commands")

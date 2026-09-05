@@ -117,11 +117,15 @@ local function printSchoolInfo(schoolID, schoolName)
     end
 
     local playerLevel = UnitLevel("player") or 1
+    if resist < 0 then
+        DEFAULT_CHAT_FRAME:AddMessage("|cffffff00["..schoolName.."]|r Resist: "..resist.." (Reduction estimate unavailable for negative resistance)")
+        return
+    end
     local AR = computeAverageResist(resist, playerLevel)
     local expected, buckets = expectedReduction(resist, playerLevel)
 
     DEFAULT_CHAT_FRAME:AddMessage("|cffffff00["..schoolName.."]|r Resist: "..resist.." (Player level "..playerLevel..")")
-    DEFAULT_CHAT_FRAME:AddMessage("  Partial resists (direct damage):")
+    DEFAULT_CHAT_FRAME:AddMessage("  Partial resists (direct damage, legacy estimates):")
     DEFAULT_CHAT_FRAME:AddMessage("    0% = "..fmtPercent(buckets[0],2).." (full damage)")
     DEFAULT_CHAT_FRAME:AddMessage("   25% reduction = "..fmtPercent(buckets[25],2))
     DEFAULT_CHAT_FRAME:AddMessage("   50% reduction = "..fmtPercent(buckets[50],2))
@@ -130,7 +134,7 @@ local function printSchoolInfo(schoolID, schoolName)
     DEFAULT_CHAT_FRAME:AddMessage("  Expected avg reduction: |cff00ff00"..fmtPercent(expected,2).."|r")
 
     local binaryChance = AR
-    DEFAULT_CHAT_FRAME:AddMessage("  Direct resist (DoTs / CC): "..fmtPercent(binaryChance,2))
+    DEFAULT_CHAT_FRAME:AddMessage("  Binary spell resist estimate: "..fmtPercent(binaryChance,2))
 end
 
 local function printSimpleOverview()
@@ -144,9 +148,11 @@ local function printSimpleOverview()
                 DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": "..resist.." - "..fmtPercent(dmgReduction,1).." (Armor reduction)")
             elseif data.name == "Holy" then
                 DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": "..resist.." (No damage reduction)")
+            elseif resist < 0 then
+                DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": "..resist.." (Reduction estimate unavailable for negative resistance)")
             else
                 local expected = expectedReduction(resist, playerLevel)
-                DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": "..resist.." - "..fmtPercent(expected,2).." expected average reduction")
+                DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": "..resist.." - "..fmtPercent(expected,2).." estimated average reduction")
             end
         else
             DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": N/A")
@@ -160,6 +166,7 @@ end
 
 local function BuxResCommand(msg)
     msg = string.lower(msg or "")
+    msg = string.gsub(msg, "^%s*(.-)%s*$", "%1")
     if msg == "" then
         printSimpleOverview()
         return
@@ -167,9 +174,12 @@ local function BuxResCommand(msg)
 
     local found = nil
     for k, v in pairs(schoolMap) do
-        if string.find(k, msg) == 1 then
+        if string.sub(k, 1, string.len(msg)) == msg then
+            if found then
+                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000Ambiguous school:|r "..msg..". Use the full school name (for example, fire or frost).")
+                return
+            end
             found = v
-            break
         end
     end
 

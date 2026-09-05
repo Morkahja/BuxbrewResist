@@ -1,6 +1,6 @@
 -- BuxbrewResist
 -- /buxres [physical|holy|fire|nature|frost|shadow|arcane]
--- Prints resistance info in chat.
+-- Adds resistance details to character tooltips; /buxres remains available.
 
 --------------------------------------------------
 -- Utility
@@ -75,6 +75,16 @@ local function buildBuckets(AR)
     return buckets
 end
 
+-- Use the same legacy estimate for chat, tooltips and comparisons.
+local function expectedReduction(resistance, level)
+    local buckets = buildBuckets(computeAverageResist(resistance, level))
+    local expected = 0
+    for reduction, chance in pairs(buckets) do
+        expected = expected + reduction / 100 * chance
+    end
+    return expected, buckets
+end
+
 --------------------------------------------------
 -- Resistance values
 --------------------------------------------------
@@ -108,12 +118,7 @@ local function printSchoolInfo(schoolID, schoolName)
 
     local playerLevel = UnitLevel("player") or 1
     local AR = computeAverageResist(resist, playerLevel)
-    local buckets = buildBuckets(AR)
-
-    local expected = 0
-    for k,v in pairs(buckets) do
-        expected = expected + (k/100) * v
-    end
+    local expected, buckets = expectedReduction(resist, playerLevel)
 
     DEFAULT_CHAT_FRAME:AddMessage("|cffffff00["..schoolName.."]|r Resist: "..resist.." (Player level "..playerLevel..")")
     DEFAULT_CHAT_FRAME:AddMessage("  Partial resists (direct damage):")
@@ -140,8 +145,8 @@ local function printSimpleOverview()
             elseif data.name == "Holy" then
                 DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": "..resist.." (No damage reduction)")
             else
-                local AR = computeAverageResist(resist, playerLevel)
-                DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": "..resist.." - "..fmtPercent(AR,2))
+                local expected = expectedReduction(resist, playerLevel)
+                DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": "..resist.." - "..fmtPercent(expected,2).." expected average reduction")
             end
         else
             DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": N/A")
@@ -177,3 +182,78 @@ end
 
 SLASH_BUXRES1 = "/buxres"
 SlashCmdList["BUXRES"] = BuxResCommand
+
+--------------------------------------------------
+-- Character-panel resistance tooltips (WoW 1.12)
+--------------------------------------------------
+
+-- These are the addon's legacy estimates, not measured server probabilities.
+local function appendResistanceTooltip(frame)
+    local schoolID = frame:GetID()
+    if not schoolID or schoolID < 2 or schoolID > 6 then return end
+    if not GameTooltip:IsOwned(frame) then return end
+
+    local _, total = UnitResistance("player", schoolID)
+    if not total then return end
+    local level = math.max(UnitLevel("player") or 1, 1)
+    local cap = math.max(level, 20) * 5
+    local schoolName = getglobal("RESISTANCE" .. schoolID .. "_NAME")
+    if not schoolName then
+        for _, data in pairs(schoolMap) do
+            if data.id == schoolID then schoolName = data.name end
+        end
+    end
+
+    local function row(label, value)
+        GameTooltip:AddDoubleLine(label, value, 0.85, 0.85, 0.85, 1, 1, 1)
+    end
+    GameTooltip:AddLine(" ")
+    GameTooltip:AddLine(schoolName .. " vs level " .. level .. " (estimates)", 1, 0.82, 0)
+
+    if total < 0 then
+        row("Expected average reduction", "Unavailable")
+        GameTooltip:Show()
+        return
+    end
+
+    local average, buckets = expectedReduction(total, level)
+    GameTooltip:AddDoubleLine("Expected average reduction", fmtPercent(average, 2),
+        1, 1, 1, 0.2, 1, 0.2)
+    GameTooltip:AddLine(" ")
+    GameTooltip:AddDoubleLine("Damage reduced per spell", "Chance", 1, 0.82, 0, 1, 0.82, 0)
+    row("0% reduction - full damage", fmtPercent(buckets[0], 2))
+    row("25% reduction", fmtPercent(buckets[25], 2))
+    row("50% reduction", fmtPercent(buckets[50], 2))
+    row("75% reduction", fmtPercent(buckets[75], 2))
+    row("100% reduction - full resist", fmtPercent(buckets[100], 2))
+    GameTooltip:AddLine(" ")
+    row("Gain from +10 resistance", "+" .. fmtPercent(expectedReduction(total + 10, level) - average, 2))
+    row("Average vs level " .. (level + 3), fmtPercent(expectedReduction(total, level + 3), 2))
+    row("Resistance cap", cap .. " (" .. math.max(0, cap - total) .. " more)")
+    GameTooltip:Show()
+end
+
+local function hookResistanceFrame(frame)
+    if not frame or frame.buxResTooltipHooked then return end
+    local originalOnEnter = frame:GetScript("OnEnter")
+    if not originalOnEnter then return end
+    frame:SetScript("OnEnter", function()
+        -- Vanilla's original handler reads the global 'this'.
+        originalOnEnter()
+        appendResistanceTooltip(frame)
+    end)
+    frame.buxResTooltipHooked = true
+end
+
+local function installResistanceTooltips()
+    -- The display order differs from school IDs; always read frame:GetID().
+    for i = 1, 5 do
+        hookResistanceFrame(getglobal("MagicResFrame" .. i))
+    end
+end
+
+local tooltipEvents = CreateFrame("Frame")
+tooltipEvents:RegisterEvent("PLAYER_LOGIN")
+tooltipEvents:RegisterEvent("ADDON_LOADED")
+tooltipEvents:SetScript("OnEvent", installResistanceTooltips)
+installResistanceTooltips()

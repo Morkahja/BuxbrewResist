@@ -1,0 +1,114 @@
+"""Run with Python + lupa; optional first argument is the lupa installation path."""
+from pathlib import Path
+import sys
+
+if len(sys.argv) > 1:
+    sys.path.insert(0, sys.argv[1])
+from lupa.lua51 import LuaRuntime
+
+lua = LuaRuntime()
+lua.execute(r'''
+getglobal = function(name) return _G[name] end
+SlashCmdList = {}
+level = 45
+values = {10, 75, 70, -5}
+UnitLevel = function() return level end
+UnitResistance = function(unit, id)
+    assert(unit == "player")
+    lastSchool = id
+    return unpack(values)
+end
+GameTooltip = {lines = {}}
+function GameTooltip:IsOwned(frame) return self.owner == frame end
+function GameTooltip:AddLine(text) table.insert(self.lines, {text}) end
+function GameTooltip:AddDoubleLine(left, right) table.insert(self.lines, {left, right}) end
+function GameTooltip:Show() self.shown = true end
+messages = {}
+DEFAULT_CHAT_FRAME = {AddMessage = function(self, text) table.insert(messages, text) end}
+events = {}
+function CreateFrame()
+    local frame = {scripts = {}}
+    function frame:RegisterEvent(name) events[name] = self end
+    function frame:GetScript(name) return self.scripts[name] end
+    function frame:SetScript(name, fn) self.scripts[name] = fn end
+    function frame:GetID() return self.id end
+    return frame
+end
+local order = {6, 2, 3, 4, 5}
+for i, id in ipairs(order) do
+    local frame = CreateFrame()
+    frame.id = id
+    frame:SetScript("OnEnter", function()
+        assert(this == frame)
+        GameTooltip.owner = frame
+        GameTooltip.lines = {{"Original heading"}, {"Original rating"}}
+    end)
+    _G["MagicResFrame" .. i] = frame
+end
+function hover(i)
+    this = _G["MagicResFrame" .. i]
+    this:GetScript("OnEnter")()
+    assert(GameTooltip.lines[1][1] == "Original heading")
+    assert(GameTooltip.lines[2][1] == "Original rating")
+end
+function valueFor(label)
+    for _, line in ipairs(GameTooltip.lines) do
+        if line[1] == label then return line[2] end
+    end
+end
+''')
+lua.execute((Path(__file__).resolve().parents[1] / "BuxbrewResist.lua").read_text())
+lua.execute(r'''
+for i, id in ipairs({6, 2, 3, 4, 5}) do
+    hover(i)
+    assert(lastSchool == id, "School must come from frame ID")
+end
+assert(string.find(GameTooltip.lines[4][1], "Shadow"))
+assert(valueFor("Expected average reduction") == "25%")
+assert(valueFor("Resistance cap") == "225 (150 more)")
+local chanceSum = 0
+for _, label in ipairs({"0% reduction - full damage", "25% reduction", "50% reduction", "75% reduction", "100% reduction - full resist"}) do
+    chanceSum = chanceSum + tonumber(string.sub(valueFor(label), 1, -2))
+end
+assert(math.abs(chanceSum - 100) < 0.03)
+-- A non-round input exposes the old difference between the direct and bucket averages.
+values = {0, 89, 89, 0}
+hover(5)
+SlashCmdList.BUXRES("shadow")
+local found = false
+for _, text in ipairs(messages) do
+    if string.find(text, "Expected avg reduction:") then
+        assert(string.find(text, valueFor("Expected average reduction"), 1, true))
+        found = true
+    end
+end
+assert(found, "Tooltip average must match the detailed chat output")
+local count = #GameTooltip.lines
+for i = 1, 3 do
+    events.ADDON_LOADED:GetScript("OnEvent")()
+    events.PLAYER_LOGIN:GetScript("OnEvent")()
+    hover(5)
+    assert(#GameTooltip.lines == count, "Duplicate tooltip section")
+end
+values = {0, 0, 0, 0}
+hover(5)
+assert(valueFor("Expected average reduction") == "0%")
+values = {0, 300, 300, 0}
+hover(5)
+assert(valueFor("Expected average reduction") == "75%")
+assert(valueFor("Resistance cap") == "225 (0 more)")
+assert(valueFor("Gain from +10 resistance") == "+0%")
+level = 10
+hover(5)
+assert(valueFor("Resistance cap") == "100 (0 more)")
+values = {0, -10, 0, -10}
+hover(5)
+assert(valueFor("Expected average reduction") == "Unavailable")
+values = {}
+hover(5)
+assert(#GameTooltip.lines == 2, "Missing values should keep only the original tooltip")
+values = {0, 25, 25, 0}
+SlashCmdList.BUXRES("shadow")
+SlashCmdList.BUXRES("")
+''')
+print("PASS: Lua 5.1 load, all five schools, original text, live reads on hover, repeated installation, zero/cap/low-level/negative/missing values, slash commands")

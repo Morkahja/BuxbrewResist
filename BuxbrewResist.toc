@@ -1,7 +1,7 @@
 ## Interface: 11200
 ## Title: BuxbrewResist
-## Notes: Shows resistance info with /buxres
+## Notes: Adds resistance details to character tooltips; /buxres for chat output
 ## Author: Buxbrew
-## Version: 1.1
+## Version: 1.2
 ## SavedVariables: BuxResDB
 BuxbrewResist.lua

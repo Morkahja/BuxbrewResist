@@ -50,6 +50,20 @@ Available names are `physical`, `holy`, `fire`, `nature`, `frost`, `shadow`, and
 
 ## Understanding the estimates
 
+### Direct damage, DoTs, and spells that resist completely
+
+**Direct damage** happens in a hit. When a spell allows partial resistance, only part of that damage may get through: a 1,000-damage hit with a 25% partial resist deals 750 damage.
+
+**Damage over time (DoT)** happens in ticks. There are two different questions: did the spell land, and how much damage does a tick deal afterward? A 100-damage tick with a 25% partial resist deals 75. That illustrates the outcome, not its chance. Tick rules depend on the spell, so the addon does not present one universal DoT percentage.
+
+**Binary** means an all-or-nothing resistance check: the spell lands or is rejected, rather than having its initial effect partially reduced. Being a DoT or a direct spell does not by itself tell you all its resistance rules. The Classic reference also treats ticks from binary spells specially; this addon does not have a verified TurtleWoW model for each spell.
+
+**A spell can fail at 0 resistance.** The separate spell-hit check can also produce a “Resist” message in Vanilla. The Classic baseline is 4% spell miss between equal-level opponents before spell-hit bonuses and other modifiers, normally with a 1% minimum. This is an example, not a prediction for every enemy. The addon excludes this baseline from its resistance estimates because your resistance stat cannot tell it an enemy's spell-hit bonuses or spell-specific rules.
+
+The tooltip includes a short explanation and the command for that school. Use **`/buxres fire`**, **`/buxres shadow`**, or another school name for the full guide: your current estimates, a worked 1,000-damage example, the gain from +10 resistance, a comparison against a higher-level attacker, resistance caps, tick examples, binary checks, and spell misses. Negative resistance gets the same explanation alongside the red vulnerability estimate. Examples exclude crits, absorbs, and other damage modifiers.
+
+### How the numbers are calculated
+
 These numbers come from a legacy approximation, **not measured TurtleWoW server probabilities**. Treat them as a guide when comparing resistance values, not a guarantee of what the next spell will do. The binary-spell estimate in detailed chat output refers to an all-or-nothing resist model; it should not be read as a universal chance for every damage-over-time or crowd-control spell.
 
 For readers interested in the calculation, the model starts with `min(0.75, max(0, resistance / (5 * max(attackerLevel, 20)) * 0.75))`, builds a distribution of partial-resist outcomes, and weights each outcome by its chance. The displayed average can differ from that starting value. Chat, tooltips, and the +10 comparison use the same weighted-average calculation.

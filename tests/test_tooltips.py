@@ -156,7 +156,7 @@ assert(string.find(messages[1], "Resistance Overview", 1, true))
 values = {0, -10, 0, -10}
 messages = {}
 SlashCmdList.BUXRES("shadow")
-assert(#messages == 3 and string.find(messages[2], "|cffff3333-3.33%|r", 1, true))
+assert(#messages > 3 and string.find(messages[2], "|cffff3333-3.33%|r", 1, true))
 assert(string.find(messages[3], "+3.33%", 1, true))
 messages = {}
 SlashCmdList.BUXRES("")
@@ -167,5 +167,39 @@ for _, text in ipairs(messages) do
     end
 end
 assert(negativeSchools == 5, "All magic schools must handle negative resistance consistently")
+-- Check worked examples and explanations on all schools and both sides of zero.
+local function chatContains(fragment)
+    for _, message in ipairs(messages) do
+        if string.find(message, fragment, 1, true) then return true end
+    end
+    return false
+end
+for _, sample in ipairs({{0, "1000.0"}, {100, "750.0"}, {-30, "1100.0"}, {300, "250.0"}}) do
+    level = 60
+    values = {0, sample[1], sample[1], 0}
+    for i, school in ipairs({"arcane", "fire", "nature", "frost", "shadow"}) do
+        messages = {}
+        SlashCmdList.BUXRES(school)
+        assert(chatContains("damage -> " .. sample[2] .. " average damage"), "Incorrect live damage example")
+        assert(chatContains("Damage over time (DoTs)"))
+        assert(chatContains("100-damage tick"))
+        assert(chatContains("Binary spells (all-or-nothing)"))
+        assert(chatContains("4% spell miss"))
+        assert(chatContains("spell misses are excluded"))
+        hover(i)
+        local helpFound = false
+        for _, line in ipairs(GameTooltip.lines) do
+            if line[1] == "Details and damage examples: /buxres " .. school then helpFound = true end
+        end
+        assert(helpFound, "Tooltip must link to its own school guide")
+    end
+end
+values = {0, -30, 0, -30}
+messages = {}
+SlashCmdList.BUXRES("fire")
+assert(chatContains("Average reduction vs level 63: -10%."), "Vulnerability must use defender level")
+messages = {}
+SlashCmdList.BUXRES("holy")
+assert(chatContains("Holy spells can still fail a spell-hit check"))
 ''')
 print("PASS: Lua 5.1 load, all five schools, original text, live reads on hover, repeated installation, zero/cap/low-level/negative/missing values, slash commands")

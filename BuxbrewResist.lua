@@ -107,69 +107,73 @@ local function damageExample(amount, reduction)
     return string.format("%.1f", amount * (1 - reduction))
 end
 
--- Keep the short tooltip explanation shared by positive and negative stats.
-local function appendMechanicsHelp(schoolID)
-    local function line(text)
-        GameTooltip:AddLine(text, 0.85, 0.85, 0.85, true)
-    end
+-- Baseline for an ordinary incoming magic spell against the player.
+-- No attacker spell-hit bonuses or special spell flags are assumed.
+local function baseSpellMiss(playerLevel, attackerLevel)
+    local difference = playerLevel - attackerLevel
+    local chance = 0.04 + difference * 0.01
+    if difference > 2 then chance = 0.06 + (difference - 2) * 0.07 end
+    return clamp(chance, 0.01, 1)
+end
+
+local function totalReduction(resist, playerLevel, attackerLevel)
+    attackerLevel = attackerLevel or playerLevel
+    local average = expectedReduction(resist, resist < 0 and playerLevel or attackerLevel)
+    local miss = baseSpellMiss(playerLevel, attackerLevel)
+    -- Layer the baseline onto the legacy resistance model, without double counting.
+    return miss + (1 - miss) * average, miss
+end
+
+local function coloredPercent(value)
+    local color = value < 0 and "|cffff3333" or "|cff00ff00"
+    return color .. fmtPercent(value, 2) .. "|r"
+end
+
+local function appendTotalTooltip(resist, level)
+    local total, miss = totalReduction(resist, level)
     GameTooltip:AddLine(" ")
-    GameTooltip:AddLine("How resistance works", 1, 0.82, 0)
-    line("Direct damage: partial resists reduce a hit's damage.")
-    line("DoTs: applying the spell and resisting its ticks are different checks; tick rules depend on the spell.")
-    line("Binary spells: all-or-nothing resistance checks. Not every DoT or direct spell uses the same rules.")
-    line("Spell misses can also say 'Resist', even at 0 resistance. Base spell misses are not included above.")
-    for command, data in pairs(schoolMap) do
-        if data.id == schoolID then
-            line("Details and damage examples: /buxres " .. command)
-            break
-        end
-    end
+    GameTooltip:AddDoubleLine("Base spell miss (assumed)", fmtPercent(miss, 2), 0.85, 0.85, 0.85, 1, 1, 1)
+    GameTooltip:AddLine("Same-level caster; no spell-hit bonus. Direct-damage estimate.", 0.85, 0.85, 0.85, true)
+    GameTooltip:AddDoubleLine("Total expected average reduction", fmtPercent(total, 2),
+        1, 1, 1, total < 0 and 1 or 0.2, total < 0 and 0.2 or 1, 0.2)
 end
 
 local function printMechanicsDetails(resist, level, schoolName)
-    local function say(text)
-        DEFAULT_CHAT_FRAME:AddMessage("  " .. text)
-    end
-    local function heading(text)
-        say("|cffffff00" .. text .. "|r")
-    end
+    local function say(text) DEFAULT_CHAT_FRAME:AddMessage("  " .. text) end
+    local function heading(text) say("|cffffff00" .. text .. "|r") end
     local average = expectedReduction(resist, level)
+    local total, miss = totalReduction(resist, level)
     local cap = 5 * math.max(level, 20)
-    heading("Your stats and examples")
-    say("Attacker assumed level " .. level .. "; no enemy resistance penetration assumed.")
-    say("1,000 " .. schoolName .. " damage -> " .. damageExample(1000, average) .. " average damage in this model.")
-    say("This is an average over many hits, before crits, absorbs and other damage modifiers; spell misses are excluded.")
-    say("+10 resistance: " .. fmtPercent(expectedReduction(resist + 10, level) - average, 2) .. " percentage-point gain in average reduction.")
-    local higherAverage = resist < 0 and average or expectedReduction(resist, level + 3)
-    say("Average reduction vs level " .. (level + 3) .. ": " .. fmtPercent(higherAverage, 2) .. ".")
-    say("Model resistance cap vs level " .. level .. ": " .. cap .. " (" .. math.max(0, cap - resist) .. " more needed); vs level " .. (level + 3) .. ": " .. (5 * math.max(level + 3, 20)) .. ".")
-    heading("Direct damage and partial resists")
-    say("Non-binary means damage can be partially resisted. A 1,000-damage hit with a 25% partial resist deals 750; with 50%, 500; with 75%, 250.")
-    say("The bucket table is the addon's legacy approximation, not a universal outcome table for every spell or attacker.")
-    heading("Damage over time (DoTs)")
-    say("A DoT deals damage in ticks. The initial cast can fail to land; that is different from reducing a tick after it lands.")
-    say("Tick resistance depends on the spell. Do not read the direct-damage table as the exact chances for every DoT.")
-    say("Example: if a 100-damage tick is partially resisted by 25%, it deals 75. This example explains the outcome, not its chance.")
-    say("The Classic reference gives ticks from binary spells special treatment. We do not have a verified TurtleWoW per-spell tick model.")
-    heading("Binary spells (all-or-nothing)")
-    say("The resistance check either rejects the spell or lets it land, rather than partially reducing that initial effect. Spell classification matters, not just its school.")
+    heading("What this means for you")
+    say("Base spell miss: " .. fmtPercent(miss, 2) .. " (same-level caster, no spell-hit bonus). Even 0 resistance helps through this baseline.")
+    say("Total expected average reduction: " .. coloredPercent(total))
+    say("For 1,000 incoming " .. schoolName .. " damage per cast: about " .. damageExample(1000, total) .. " damage per cast on average, including misses.")
+    say("Without resistance: 960.0 average damage. With resistance alone: " .. damageExample(1000, average) .. ". With both: " .. damageExample(1000, total) .. ".")
+    say("Think of 100 casts: about 4 miss. Your resistance then reduces damage from the other 96. These are averages, not guaranteed counts.")
+    say("+10 resistance improves your TOTAL by " .. fmtPercent(totalReduction(resist + 10, level) - total, 2) .. " percentage points.")
+    local higher, higherMiss = totalReduction(resist, level, level + 3)
+    say("Against level " .. (level + 3) .. ": " .. fmtPercent(higher, 2) .. " total reduction, including " .. fmtPercent(higherMiss, 2) .. " assumed spell miss.")
+    say("Resistance cap against level " .. level .. ": " .. cap .. " (" .. math.max(0, cap - resist) .. " more needed).")
+    heading("A hit: Shadow Bolt")
+    say("A warlock's Shadow Bolt deals damage in one hit. It is a non-binary example: some damage can be resisted without stopping the whole spell.")
+    say("If a 1,000-damage hit is resisted by 25%, you take 750; at 50%, you take 500. Shadow Bolt uses Shadow resistance.")
+    heading("A DoT: Corruption")
+    say("A warlock's Corruption deals Shadow damage over time, in ticks. If the cast fails to land, none of its ticks happen.")
+    say("After it lands, tick rules depend on the spell. A hypothetical 100-damage tick reduced by 25% deals 75; this is an example, not a Corruption tick prediction.")
+    say("The direct-damage total above is not a universal DoT total. We do not know each TurtleWoW spell's tick rules.")
+    heading("All-or-nothing: Frostbolt")
+    say("In the Classic reference, a mage's Frostbolt is binary because it combines damage with a slow. Its resistance check lets the spell land or rejects it, instead of partially resisting its initial damage.")
+    say("Frostbolt uses Frost resistance. These spell names explain the types; your numbers here describe " .. schoolName .. ".")
     if resist >= 0 then
         local binary = computeAverageResist(resist, level)
-        say("Resistance-only binary estimate: " .. fmtPercent(binary, 2) .. ". Roughly " .. string.format("%.1f", binary * 100) .. " out of 100 checks in this model; not a guaranteed count or total failure chance.")
+        say("For a binary spell of this school: " .. fmtPercent(binary, 2) .. " resistance contribution; with base miss, " .. fmtPercent(clamp(binary + miss, 0, 1), 2) .. " estimated rejection chance in the Classic reference.")
+        say("Binary rejection uses the reference's combined failure roll; the direct-damage total uses the separate legacy damage model.")
     else
-        say("Negative resistance is modeled as extra damage, not a negative probability of resisting. This does not estimate crowd-control duration.")
+        say("Negative resistance means extra damage in our model, not a negative resist chance. It does not predict how long a slow lasts.")
     end
-    heading("Why 'Resist' can appear at 0 resistance")
-    say("Spell hit has its own failure chance. In Vanilla, a failed magic hit check can also display 'Resist'.")
-    say("Classic baseline example: equal-level caster, no spell-hit bonuses or other modifiers -> 4% spell miss; normally a 1% minimum after hit bonuses. Some spells bypass this check.")
-    say("That baseline is separate from your resistance stat. Enemy level, spell hit and spell-specific effects change it; this addon cannot know the total from your resistance alone.")
-    heading("Model limits")
-    if resist < 0 then
-        say("Negative estimate = resistance / (5 x max(your level, 20)); uses your level, without the positive formula's 0.75 factor.")
-    else
-        say("Model input = resistance / (5 x max(attacker level, 20)) x 75%, limited to 0-75%; the displayed average weights the legacy buckets.")
-    end
-    say("Estimates, not measured TurtleWoW probabilities. Actual results depend on spell flags, attacker type, penetration, talents and server rules.")
+    heading("Why the game says Resist")
+    say("A failed spell-hit check can also say 'Resist'. That is why the baseline is included in your total, even with 0 resistance.")
+    say("Totals are estimates for ordinary spells, before crits, absorbs and other effects. Enemy spell hit, penetration and special spell rules can change them; TurtleWoW behavior is not verified.")
 end
 
 local function printSchoolInfo(schoolID, schoolName)
@@ -181,7 +185,7 @@ local function printSchoolInfo(schoolID, schoolName)
         return
     elseif schoolName == "Holy" then
         DEFAULT_CHAT_FRAME:AddMessage("|cffffff00["..schoolName.."]|r: "..(getResistanceValue(schoolID) or "N/A").." (No resistance-stat mitigation in the Classic reference)")
-        DEFAULT_CHAT_FRAME:AddMessage("  Holy spells can still fail a spell-hit check. 'No resistance' does not mean guaranteed hits.")
+        DEFAULT_CHAT_FRAME:AddMessage("  Holy spells can still fail a spell-hit check. Total expected average reduction: 4% from assumed base spell misses (same-level caster, no spell-hit bonus).")
         return
     end
 
@@ -195,7 +199,7 @@ local function printSchoolInfo(schoolID, schoolName)
     if resist < 0 then
         local average = expectedReduction(resist, playerLevel)
         DEFAULT_CHAT_FRAME:AddMessage("|cffffff00["..schoolName.."]|r Resist: "..resist.." (Legacy vulnerability estimate)")
-        DEFAULT_CHAT_FRAME:AddMessage("  Expected avg reduction: |cffff3333"..fmtPercent(average,2).."|r")
+        DEFAULT_CHAT_FRAME:AddMessage("  Resistance-only avg reduction: |cffff3333"..fmtPercent(average,2).."|r")
         DEFAULT_CHAT_FRAME:AddMessage("  Extra damage taken: |cffff3333+"..fmtPercent(-average,2).."|r (estimate)")
         printMechanicsDetails(resist, playerLevel, schoolName)
         return
@@ -210,7 +214,7 @@ local function printSchoolInfo(schoolID, schoolName)
     DEFAULT_CHAT_FRAME:AddMessage("   50% reduction = "..fmtPercent(buckets[50],2))
     DEFAULT_CHAT_FRAME:AddMessage("   75% reduction = "..fmtPercent(buckets[75],2))
     DEFAULT_CHAT_FRAME:AddMessage("  100% reduction = "..fmtPercent(buckets[100],2).." (full resist)")
-    DEFAULT_CHAT_FRAME:AddMessage("  Expected avg reduction: |cff00ff00"..fmtPercent(expected,2).."|r")
+    DEFAULT_CHAT_FRAME:AddMessage("  Resistance-only avg reduction: |cff00ff00"..fmtPercent(expected,2).."|r")
 
     local binaryChance = AR
     DEFAULT_CHAT_FRAME:AddMessage("  Binary spell resist estimate: "..fmtPercent(binaryChance,2))
@@ -227,13 +231,10 @@ local function printSimpleOverview()
                 local dmgReduction = resist / (resist + 400 + 85 * playerLevel)
                 DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": "..resist.." - "..fmtPercent(dmgReduction,1).." (Armor reduction)")
             elseif data.name == "Holy" then
-                DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": "..resist.." (No damage reduction)")
-            elseif resist < 0 then
-                local average = expectedReduction(resist, playerLevel)
-                DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": "..resist.." - |cffff3333"..fmtPercent(average,2).."|r estimated average reduction (+"..fmtPercent(-average,2).." extra damage)")
+                DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": "..resist.." (0% resistance reduction; 4% base spell miss assumed)")
             else
-                local expected = expectedReduction(resist, playerLevel)
-                DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": "..resist.." - "..fmtPercent(expected,2).." estimated average reduction")
+                local expected = totalReduction(resist, playerLevel)
+                DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": "..resist.." - "..coloredPercent(expected).." total expected average reduction (4% base miss assumed)")
             end
         else
             DEFAULT_CHAT_FRAME:AddMessage("  "..data.name..": N/A")
@@ -303,20 +304,20 @@ local function appendResistanceTooltip(frame)
 
     if total < 0 then
         local average = expectedReduction(total, level)
-        GameTooltip:AddDoubleLine("Expected average reduction", fmtPercent(average, 2),
+        GameTooltip:AddDoubleLine("Resistance-only average reduction", fmtPercent(average, 2),
             1, 1, 1, 1, 0.2, 0.2)
         GameTooltip:AddDoubleLine("Extra damage taken (estimate)", "+" .. fmtPercent(-average, 2),
             0.85, 0.85, 0.85, 1, 0.2, 0.2)
         GameTooltip:AddLine("Legacy vulnerability model; server behavior unverified.", 0.85, 0.85, 0.85)
-        row("Gain from +10 resistance", "+" .. fmtPercent(expectedReduction(total + 10, level) - average, 2))
+        row("Total gain from +10 resistance", "+" .. fmtPercent(totalReduction(total + 10, level) - totalReduction(total, level), 2))
         row("Resistance cap", cap .. " (" .. math.max(0, cap - total) .. " more)")
-        appendMechanicsHelp(schoolID)
+        appendTotalTooltip(total, level)
         GameTooltip:Show()
         return
     end
 
     local average, buckets = expectedReduction(total, level)
-    GameTooltip:AddDoubleLine("Expected average reduction", fmtPercent(average, 2),
+    GameTooltip:AddDoubleLine("Resistance-only average reduction", fmtPercent(average, 2),
         1, 1, 1, 0.2, 1, 0.2)
     GameTooltip:AddLine(" ")
     GameTooltip:AddDoubleLine("Damage reduced per spell", "Chance", 1, 0.82, 0, 1, 0.82, 0)
@@ -326,10 +327,10 @@ local function appendResistanceTooltip(frame)
     row("75% reduction", fmtPercent(buckets[75], 2))
     row("100% reduction - full resist", fmtPercent(buckets[100], 2))
     GameTooltip:AddLine(" ")
-    row("Gain from +10 resistance", "+" .. fmtPercent(expectedReduction(total + 10, level) - average, 2))
-    row("Average vs level " .. (level + 3), fmtPercent(expectedReduction(total, level + 3), 2))
+    row("Total gain from +10 resistance", "+" .. fmtPercent(totalReduction(total + 10, level) - totalReduction(total, level), 2))
+    row("Total vs level " .. (level + 3) .. " (1% miss)", fmtPercent(totalReduction(total, level, level + 3), 2))
     row("Resistance cap", cap .. " (" .. math.max(0, cap - total) .. " more)")
-    appendMechanicsHelp(schoolID)
+    appendTotalTooltip(total, level)
     GameTooltip:Show()
 end
 

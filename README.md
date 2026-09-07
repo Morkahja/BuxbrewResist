@@ -29,10 +29,12 @@ Open your character panel (normally **C**) and hover over **Arcane, Fire, Nature
 
 The added section shows:
 
-- **Expected average reduction:** the estimated damage reduction across many spells, highlighted in green. It does not mean every spell loses that much damage.
+- **Resistance-only average reduction:** the estimated damage reduction across many spells, highlighted in green. It does not mean every spell loses that much damage.
 - **Damage reduced per spell / Chance:** the estimated chances of taking full damage or resisting 25%, 50%, 75%, or all of a spell's damage.
-- **Gain from +10 resistance:** how much the estimated average would increase with another 10 resistance. This is a percentage-point gain: going from 20% to 23% is a gain of 3 points, shown as `+3%`.
-- **Average vs level +3:** the estimate against an attacker three levels above you.
+- **Total gain from +10 resistance:** how much the total estimated average would increase with another 10 resistance. This is a percentage-point gain: going from 20% to 23% is a gain of 3 points, shown as `+3%`.
+- **Total vs level +3:** the combined estimate against an attacker three levels above you, using a 1% base spell-miss assumption.
+- **Base spell miss (assumed):** 4% against a same-level caster with no spell-hit bonuses.
+- **Total expected average reduction:** resistance plus base misses, highlighted at the bottom. Even at 0 resistance, this total is 4%.
 - **Resistance cap:** the cap used by the model against an attacker of your level, followed by how much more resistance you need to reach it.
 
 The main estimate assumes an attacker at your level. **Negative resistance shows a negative reduction in red**, plus an **Extra damage taken (estimate)** row. For example, at level 60, -30 Fire resistance gives an estimated -10% reduction: a 100-damage Fire hit would become 110 damage before other modifiers. The partial-resist table is hidden while resistance is negative.
@@ -52,15 +54,23 @@ Available names are `physical`, `holy`, `fire`, `nature`, `frost`, `shadow`, and
 
 ### Direct damage, DoTs, and spells that resist completely
 
-**Direct damage** happens in a hit. When a spell allows partial resistance, only part of that damage may get through: a 1,000-damage hit with a 25% partial resist deals 750 damage.
+**Direct damage** happens in a hit: a warlock's **Shadow Bolt** is a non-binary example, meaning its damage can be partially resisted. When a spell allows partial resistance, only part of that damage may get through: a 1,000-damage hit with a 25% partial resist deals 750 damage.
 
-**Damage over time (DoT)** happens in ticks. There are two different questions: did the spell land, and how much damage does a tick deal afterward? A 100-damage tick with a 25% partial resist deals 75. That illustrates the outcome, not its chance. Tick rules depend on the spell, so the addon does not present one universal DoT percentage.
+**Damage over time (DoT)** happens in ticks, like a warlock's **Corruption**. There are two different questions: did the spell land, and how much damage does a tick deal afterward? A 100-damage tick with a 25% partial resist deals 75. That illustrates the outcome, not its chance. Tick rules depend on the spell, so the addon does not present one universal DoT percentage.
 
-**Binary** means an all-or-nothing resistance check: the spell lands or is rejected, rather than having its initial effect partially reduced. Being a DoT or a direct spell does not by itself tell you all its resistance rules. The Classic reference also treats ticks from binary spells specially; this addon does not have a verified TurtleWoW model for each spell.
+**Binary** means an all-or-nothing resistance check. A mage's **Frostbolt** is a Classic-reference example because it combines damage with a slow: the spell lands or is rejected, rather than having its initial effect partially reduced. Being a DoT or a direct spell does not by itself tell you all its resistance rules. The Classic reference also treats ticks from binary spells specially; this addon does not have a verified TurtleWoW model for each spell.
 
-**A spell can fail at 0 resistance.** The separate spell-hit check can also produce a “Resist” message in Vanilla. The Classic baseline is 4% spell miss between equal-level opponents before spell-hit bonuses and other modifiers, normally with a 1% minimum. This is an example, not a prediction for every enemy. The addon excludes this baseline from its resistance estimates because your resistance stat cannot tell it an enemy's spell-hit bonuses or spell-specific rules.
+**A spell can fail at 0 resistance.** The separate spell-hit check can also produce a “Resist” message in Vanilla. The Classic baseline is 4% spell miss between equal-level opponents before spell-hit bonuses and other modifiers, normally with a 1% minimum. This is an example, not a prediction for every enemy. The addon includes the assumed baseline in its total estimate. Enemy spell-hit bonuses and special spell rules are unknown, so this is an assumed scenario, not a measurement of your current opponent.
 
-The tooltip includes a short explanation and the command for that school. Use **`/buxres fire`**, **`/buxres shadow`**, or another school name for the full guide: your current estimates, a worked 1,000-damage example, the gain from +10 resistance, a comparison against a higher-level attacker, resistance caps, tick examples, binary checks, and spell misses. Negative resistance gets the same explanation alongside the red vulnerability estimate. Examples exclude crits, absorbs, and other damage modifiers.
+The tooltip keeps the numbers compact and puts the combined total at the bottom; explanations and spell examples are in chat. Use **`/buxres fire`**, **`/buxres shadow`**, or another school name for the full guide: your current estimates, a worked 1,000-damage example, the gain from +10 resistance, a comparison against a higher-level attacker, resistance caps, tick examples, binary checks, and spell misses. Negative resistance gets the same explanation alongside the red vulnerability estimate. Examples exclude crits, absorbs, and other damage modifiers.
+
+### The total includes base spell misses
+
+The direct-damage total is `miss + (1 - miss) * resistanceAverage`. This layers base misses onto the addon's existing approximation without counting avoided damage twice. It is not simply resistance reduction plus four percentage points.
+
+At **level 45 with 42 Fire resistance**, the resistance-only estimate is **11.25%**. With the assumed **4%** base miss chance, the total is **14.8%**: an incoming 1,000-damage cast averages **852 damage**, compared with **960** from base misses alone. At level 60 with -30 resistance, the -10% vulnerability estimate combines with misses to give **-5.6% total reduction** (1,056 damage per 1,000-damage cast), shown in red.
+
+The +10 comparison, higher-level comparison, and chat overview also use totals. The resistance buckets remain resistance-only. The same-level cap is still a resistance cap; adding misses does not change it. The combined direct-damage estimate is not a universal DoT or binary-spell formula. Binary rejection in chat follows the Classic reference's combined failure roll (base miss plus the resistance contribution, capped at 100%).
 
 ### How the numbers are calculated
 

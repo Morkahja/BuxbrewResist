@@ -64,7 +64,7 @@ for i, id in ipairs({6, 2, 3, 4, 5}) do
     assert(lastSchool == id, "School must come from frame ID")
 end
 assert(string.find(GameTooltip.lines[4][1], "Shadow"))
-assert(valueFor("Expected average reduction") == "25%")
+assert(valueFor("Resistance-only average reduction") == "25%")
 assert(valueFor("Resistance cap") == "225 (150 more)")
 local chanceSum = 0
 for _, label in ipairs({"0% reduction - full damage", "25% reduction", "50% reduction", "75% reduction", "100% reduction - full resist"}) do
@@ -77,8 +77,8 @@ hover(5)
 SlashCmdList.BUXRES("shadow")
 local found = false
 for _, text in ipairs(messages) do
-    if string.find(text, "Expected avg reduction:") then
-        assert(string.find(text, valueFor("Expected average reduction"), 1, true))
+    if string.find(text, "Resistance-only avg reduction:", 1, true) then
+        assert(string.find(text, valueFor("Resistance-only average reduction"), 1, true))
         found = true
     end
 end
@@ -92,40 +92,40 @@ for i = 1, 3 do
 end
 values = {0, 0, 0, 0}
 hover(5)
-assert(valueFor("Expected average reduction") == "0%")
+assert(valueFor("Resistance-only average reduction") == "0%")
 values = {0, 300, 300, 0}
 hover(5)
-assert(valueFor("Expected average reduction") == "75%")
+assert(valueFor("Resistance-only average reduction") == "75%")
 assert(valueFor("Resistance cap") == "225 (0 more)")
-assert(valueFor("Gain from +10 resistance") == "+0%")
+assert(valueFor("Total gain from +10 resistance") == "+0%")
 level = 10
 hover(5)
 assert(valueFor("Resistance cap") == "100 (0 more)")
 values = {0, -10, 0, -10}
 hover(5)
-assert(valueFor("Expected average reduction") == "-10%")
+assert(valueFor("Resistance-only average reduction") == "-10%")
 assert(valueFor("Extra damage taken (estimate)") == "+10%")
-assert(valueFor("Gain from +10 resistance") == "+10%")
+assert(valueFor("Total gain from +10 resistance") == "+9.6%")
 level = 60
 values = {0, -30, 0, -30}
 for i = 1, 5 do
     hover(i)
-    assert(valueFor("Expected average reduction") == "-10%")
+    assert(valueFor("Resistance-only average reduction") == "-10%")
     assert(valueFor("Extra damage taken (estimate)") == "+10%")
     assert(valueFor("Damage reduced per spell") == nil)
     for _, line in ipairs(GameTooltip.lines) do
-        if line[1] == "Expected average reduction" then
+        if line[1] == "Resistance-only average reduction" then
             assert(line.colors[4] == 1 and line.colors[5] == 0.2 and line.colors[6] == 0.2, "Negative average must be red")
         end
     end
 end
 values = {0, -5, 0, -5}
 hover(2)
-assert(valueFor("Expected average reduction") == "-1.67%")
-assert(tonumber(string.sub(valueFor("Gain from +10 resistance"), 2, -2)) > 1.67)
+assert(valueFor("Resistance-only average reduction") == "-1.67%")
+assert(tonumber(string.sub(valueFor("Total gain from +10 resistance"), 2, -2)) > 1.6)
 values = {0, 0, 0, 0}
 hover(2)
-assert(valueFor("Expected average reduction") == "0%")
+assert(valueFor("Resistance-only average reduction") == "0%")
 assert(valueFor("Extra damage taken (estimate)") == nil)
 values = {}
 hover(5)
@@ -162,7 +162,7 @@ messages = {}
 SlashCmdList.BUXRES("")
 local negativeSchools = 0
 for _, text in ipairs(messages) do
-    if string.find(text, "|cffff3333-3.33%|r", 1, true) then
+    if string.find(text, "|cff00ff000.8%|r", 1, true) then
         negativeSchools = negativeSchools + 1
     end
 end
@@ -174,32 +174,49 @@ local function chatContains(fragment)
     end
     return false
 end
-for _, sample in ipairs({{0, "1000.0"}, {100, "750.0"}, {-30, "1100.0"}, {300, "250.0"}}) do
+for _, sample in ipairs({{0, "960.0", "4%"}, {100, "720.0", "28%"}, {-30, "1056.0", "-5.6%"}, {300, "240.0", "76%"}}) do
     level = 60
     values = {0, sample[1], sample[1], 0}
     for i, school in ipairs({"arcane", "fire", "nature", "frost", "shadow"}) do
         messages = {}
         SlashCmdList.BUXRES(school)
-        assert(chatContains("damage -> " .. sample[2] .. " average damage"), "Incorrect live damage example")
-        assert(chatContains("Damage over time (DoTs)"))
-        assert(chatContains("100-damage tick"))
-        assert(chatContains("Binary spells (all-or-nothing)"))
-        assert(chatContains("4% spell miss"))
-        assert(chatContains("spell misses are excluded"))
+        assert(chatContains("about " .. sample[2] .. " damage per cast"), "Incorrect total damage example")
+        assert(chatContains("Shadow Bolt"))
+        assert(chatContains("Corruption"))
+        assert(chatContains("Frostbolt"))
+        assert(chatContains("Base spell miss: 4%"))
         hover(i)
-        local helpFound = false
+        assert(valueFor("Total expected average reduction") == sample[3])
+        assert(GameTooltip.lines[#GameTooltip.lines][1] == "Total expected average reduction")
         for _, line in ipairs(GameTooltip.lines) do
-            if line[1] == "Details and damage examples: /buxres " .. school then helpFound = true end
+            assert(line[1] ~= "How resistance works", "Remove tooltip mechanics guide")
+            assert(not string.find(line[1], "DoTs:", 1, true))
         end
-        assert(helpFound, "Tooltip must link to its own school guide")
+        messages = {}
+        SlashCmdList.BUXRES("")
+        assert(chatContains(sample[3] .. "|r total expected average reduction"))
     end
 end
+level = 45
+values = {0, 42, 42, 0}
+hover(2)
+assert(valueFor("Resistance-only average reduction") == "11.25%")
+assert(valueFor("Total expected average reduction") == "14.8%", "Combine multiplicatively, not by adding 4 points")
+assert(valueFor("Total gain from +10 resistance") == "+4%")
+assert(valueFor("Total vs level 48 (1% miss)") == "11.05%")
+messages = {}
+SlashCmdList.BUXRES("fire")
+assert(chatContains("852.0 damage per cast"))
+level = 60
 values = {0, -30, 0, -30}
 messages = {}
 SlashCmdList.BUXRES("fire")
-assert(chatContains("Average reduction vs level 63: -10%."), "Vulnerability must use defender level")
+assert(chatContains("Against level 63: -8.9%"), "Vulnerability uses defender level while baseline changes")
+hover(2)
+local last = GameTooltip.lines[#GameTooltip.lines]
+assert(last.colors[4] == 1 and last.colors[5] == 0.2, "Negative total is red")
 messages = {}
 SlashCmdList.BUXRES("holy")
-assert(chatContains("Holy spells can still fail a spell-hit check"))
+assert(chatContains("Total expected average reduction: 4%"))
 ''')
 print("PASS: Lua 5.1 load, all five schools, original text, live reads on hover, repeated installation, zero/cap/low-level/negative/missing values, slash commands")
